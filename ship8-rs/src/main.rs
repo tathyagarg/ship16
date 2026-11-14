@@ -1,4 +1,8 @@
-use std::{io::Write, time::Duration};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    time::Duration,
+};
 
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
@@ -21,7 +25,10 @@ impl TerminalGuard {
         execute!(
             std::io::stdout(),
             terminal::EnterAlternateScreen,
-            crossterm::cursor::Hide
+            crossterm::cursor::Hide,
+            crossterm::event::PushKeyboardEnhancementFlags(
+                crossterm::event::KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+            )
         )?;
         Ok(TerminalGuard)
     }
@@ -38,9 +45,6 @@ fn restore_terminal() {
         std::io::stdout(),
         terminal::LeaveAlternateScreen,
         crossterm::cursor::Show,
-        crossterm::event::PushKeyboardEnhancementFlags(
-            crossterm::event::KeyboardEnhancementFlags::REPORT_EVENT_TYPES
-        )
     );
     let _ = terminal::disable_raw_mode();
 }
@@ -97,21 +101,33 @@ pub struct Emulator {
     timer: timer::Timer,
     ppu: ppu::Ppu,
     input: input::Input,
-    logger: Option<std::fs::File>,
+    logger: Option<BufWriter<File>>,
 
     interrupt_controller: interrupt::InterruptController,
     running: bool,
 }
 
+macro_rules! trace {
+    ($emu:expr, $($arg:tt)*) => {
+        if let Some(w) = $emu.logger.as_mut() {
+            let _ = writeln!(w, $($arg)*);
+        }
+    };
+}
+
 impl Emulator {
     pub fn new() -> Self {
+        let logger = std::env::var_os("SHIP8_LOG")
+            .and_then(|path| File::create(path).ok())
+            .map(BufWriter::new);
+
         Emulator {
             cpu: cpu::Cpu::new(),
             memory: memory::Memory::new(),
             timer: timer::Timer::new(),
             ppu: ppu::Ppu::new(),
             input: input::Input::new(),
-            logger: std::fs::File::create("emulator.log").ok(),
+            logger,
             interrupt_controller: interrupt::InterruptController::new(),
             running: false,
         }
@@ -168,17 +184,20 @@ impl Emulator {
         match instruction {
             0x0000 => {
                 // NOP
-                self.log(format!("NOP [{:04X}]", initial_pc).as_str());
+                trace!(self, "NOP [{:04X}]", initial_pc);
                 1
             }
             0x1000 => {
-                self.log(format!("CLEAR [{:04X}]", initial_pc).as_str());
+                trace!(self, "CLEAR [{:04X}]", initial_pc);
                 self.clear_buffer();
                 4097
             }
             0x2000..=0x20FF => {
                 let color = (instruction & 0x00FF) as u8;
-                self.log(format!("DRAW_COLOR [{:04X}], color: {:02X}", initial_pc, color).as_str());
+                trace!(
+                    self,
+                    "DRAW_COLOR [{:04X}], color: {:02X}", initial_pc, color
+                );
                 self.draw_color(color);
                 2
             }
@@ -285,7 +304,7 @@ impl Emulator {
             }
             0x5000..=0x5FFF => {
                 let address = instruction & 0x0FFF;
-                self.log(format!("JUMP [{:04X}], address: {:03X}", initial_pc, address).as_str());
+                trace!(self, "JUMP [{:04X}], address: {:03X}", initial_pc, address);
                 self.cpu.pc = address;
                 2
             }
@@ -356,7 +375,7 @@ impl Emulator {
             }
             0x9000..=0x9FFF => {
                 let address = instruction & 0x0FFF;
-                self.log(format!("CALL [{:04X}], address: {:03X}", initial_pc, address).as_str());
+                trace!(self, "CALL [{:04X}], address: {:03X}", initial_pc, address);
                 self.memory.push_to_stack_u16(&mut self.cpu.sp, self.cpu.pc);
                 self.cpu.pc = address;
                 4
@@ -444,7 +463,7 @@ impl Emulator {
             }
             0xFFFF => {
                 self.running = false;
-                self.log(format!("HALT [{:04X}]", initial_pc).as_str());
+                trace!(self, "HALT [{:04X}]", initial_pc);
                 1
             }
             _ => todo!("Instruction {:04X} not implemented", instruction),
