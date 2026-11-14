@@ -10,3 +10,4 @@ pub const VRAM_SIZE: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
 pub const STACK_LIMIT: usize = RAM_BASE + VRAM_SIZE;
 
 pub const CYCLES_PER_FRAME: u64 = 16667; // 60 FPS
+pub const INTERRUPT_ENTRY_CYCLES: u32 = 4;

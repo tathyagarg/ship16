@@ -126,4 +126,8 @@ impl Memory {
     pub fn vram(&self) -> &[u8] {
         &self.0[RAM_BASE..RAM_BASE + VRAM_SIZE]
     }
+
+    pub fn vram_mut(&mut self) -> &mut [u8] {
+        &mut self.0[RAM_BASE..RAM_BASE + VRAM_SIZE]
+    }
 }

@@ -1,38 +1,89 @@
-pub const INTERRUPT_VBLANK: u8 = 0x01;
-pub const INTERRUPT_TIMER: u8 = 0x02;
-pub const INTERRUPT_INPUT: u8 = 0x04;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Interrupt {
+    VBlank = 0,
+    Timer = 1,
+    Input = 2,
+}
+
+impl Interrupt {
+    pub const ALL: [Interrupt; 3] = [Interrupt::VBlank, Interrupt::Timer, Interrupt::Input];
+    pub const MASK_ALL: u8 = 0b0000_0111;
+
+    pub fn bit(&self) -> u8 {
+        1 << (*self as u8)
+    }
+
+    pub fn from_index(index: u8) -> Option<Self> {
+        match index {
+            0 => Some(Interrupt::VBlank),
+            1 => Some(Interrupt::Timer),
+            2 => Some(Interrupt::Input),
+            _ => None,
+        }
+    }
+}
 
 pub struct InterruptController {
     enabled: u8,
     requested: u8,
+
+    master: bool,
+    vectors: [Option<u16>; 3],
 }
 
 impl InterruptController {
     pub fn new() -> Self {
         InterruptController {
-            enabled: 0xFF,
+            enabled: 0,
             requested: 0,
+
+            master: false,
+            vectors: [None; 3],
         }
     }
 
-    pub fn request_interrupt(&mut self, interrupt: u8) {
-        self.requested |= interrupt;
+    pub fn enable(&mut self, mask: u8) {
+        self.enabled |= mask & Interrupt::MASK_ALL;
     }
 
-    pub fn clear_interrupt(&mut self, interrupt: u8) {
-        self.requested &= !interrupt;
+    pub fn disable(&mut self, mask: u8) {
+        self.enabled &= !(mask & Interrupt::MASK_ALL);
     }
 
-    pub fn is_any_interrupt_pending(&self) -> bool {
+    pub fn set_master(&mut self, enabled: bool) {
+        self.master = enabled;
+    }
+
+    pub fn set_vector(&mut self, interrupt: Interrupt, vector: u16) {
+        self.vectors[interrupt as usize] = Some(vector);
+    }
+
+    pub fn request_interrupt(&mut self, interrupt: Interrupt) {
+        self.requested |= interrupt.bit();
+    }
+
+    pub fn clear_interrupt(&mut self, interrupt: Interrupt) {
+        self.requested &= !interrupt.bit();
+    }
+
+    pub fn has_pending(&self) -> bool {
         (self.requested & self.enabled) != 0
     }
 
-    pub fn get_pending_interrupt(&self) -> Option<u8> {
-        let pending = self.requested & self.enabled;
-        if pending == 0 {
-            None
-        } else {
-            Some(pending.trailing_zeros() as u8)
+    pub fn acknowledge(&mut self) -> Option<(Interrupt, u16)> {
+        if !self.master {
+            return None;
         }
+
+        let pending = self.requested & self.enabled;
+        let interrupt = Interrupt::ALL
+            .into_iter()
+            .find(|i| pending & i.bit() != 0)?;
+
+        self.requested &= !interrupt.bit();
+        let vector = self.vectors[interrupt as usize]?;
+        self.master = false;
+
+        Some((interrupt, vector))
     }
 }

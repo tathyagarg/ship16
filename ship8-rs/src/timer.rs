@@ -21,6 +21,14 @@ impl Timer {
         }
     }
 
+    pub fn set_counter(&mut self, value: u16) {
+        self.counter = value;
+    }
+
+    pub fn set_reload(&mut self, value: u16) {
+        self.reload_to = value;
+    }
+
     pub fn tick_n(&mut self, n: u16) -> bool {
         if !self.enabled {
             return false;

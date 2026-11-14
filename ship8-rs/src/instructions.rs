@@ -1,5 +1,18 @@
+use crate::interrupt::Interrupt;
+
 pub const CLEAR_CYCLES: u32 = 4097;
 pub const SPRITE_CYCLES: u32 = 66;
+
+pub type RegisterIndex = usize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Flag {
+    Zero,
+    Carry,
+    Overflow,
+    Negative,
+    Collision,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Cond {
@@ -73,21 +86,66 @@ impl AluOp {
         }
     }
 
-    pub fn eval(&self, a: u16, b: u16) -> u16 {
+    pub fn eval(&self, a: u16, b: u16) -> AluOut {
+        let out = |result, carry, overflow| AluOut {
+            result,
+            carry,
+            overflow,
+        };
+
         match self {
-            AluOp::Add => a.wrapping_add(b),
-            AluOp::Sub => a.wrapping_sub(b),
-            AluOp::Mul => a.wrapping_mul(b),
-            AluOp::Div => a / b,
-            AluOp::Rem => a % b,
-            AluOp::And => a & b,
-            AluOp::Or => a | b,
-            AluOp::Xor => a ^ b,
-            AluOp::Not => !a,
-            AluOp::Shl => a << b,
-            AluOp::Shr => a >> b,
-            AluOp::Rol => a.rotate_left(b as u32),
-            AluOp::Ror => a.rotate_right(b as u32),
+            AluOp::Add => {
+                let (result, carry) = a.overflowing_add(b);
+                let overflow = ((a ^ result) & (b ^ result) & 0x8000) != 0;
+                out(result, carry, overflow)
+            }
+            AluOp::Sub => {
+                let (result, carry) = a.overflowing_sub(b);
+                let overflow = ((a ^ b) & (a ^ result) & 0x8000) != 0;
+                out(result, carry, overflow)
+            }
+            AluOp::Mul => {
+                let result = a.wrapping_mul(b);
+                let carry = (a as u32 * b as u32) > 0xFFFF;
+                let overflow = false;
+                out(result, carry, overflow)
+            }
+            AluOp::Div => match a.checked_div(b) {
+                Some(result) => out(result, false, false),
+                None => out(0, true, true),
+            },
+            AluOp::Rem => match a.checked_rem(b) {
+                Some(result) => out(result, false, false),
+                None => out(0, true, true),
+            },
+            AluOp::And => out(a & b, false, false),
+            AluOp::Or => out(a | b, false, false),
+            AluOp::Xor => out(a ^ b, false, false),
+            AluOp::Not => out(!a, false, false),
+            AluOp::Shl => match b {
+                0 => out(a, false, false),
+                1..=16 => {
+                    let wide = (a as u32) << b;
+                    out(wide as u16, (wide >> 16) & 1 != 0, false)
+                }
+                _ => out(0, true, true),
+            },
+            AluOp::Shr => match b {
+                0 => out(a, false, false),
+                1..=16 => {
+                    let wide = (a as u32) >> b;
+                    out(wide as u16, (a >> (b - 1)) & 1 != 0, false)
+                }
+                _ => out(0, true, true),
+            },
+            AluOp::Rol => {
+                let r = a.rotate_left(b as u32);
+                out(r, b % 16 != 0 && r & 1 != 0, false)
+            }
+            AluOp::Ror => {
+                let r = a.rotate_right(b as u32);
+                out(r, b % 16 != 0 && r & 0x8000 != 0, false)
+            }
         }
     }
 
@@ -101,32 +159,90 @@ impl AluOp {
     }
 }
 
+pub struct AluOut {
+    pub result: u16,
+    pub carry: bool,
+    pub overflow: bool,
+}
+
 #[derive(Debug)]
 pub enum Instr {
     Nop,
+    Halt,
+    Wait,
+
+    Load8(RegisterIndex),
+    Store8(RegisterIndex),
+    Load16(RegisterIndex),
+    Store16(RegisterIndex),
+    AddIndex(RegisterIndex),
+    Push(RegisterIndex),
+    Pop(RegisterIndex),
+    SkipIfFlag {
+        flag: Flag,
+        set: bool,
+    },
+
+    TimerCount(RegisterIndex),
+    TimerReload(RegisterIndex),
+    TimerRead(RegisterIndex),
+    TimerConfig {
+        enable: bool,
+        periodic: bool,
+    },
+
+    IntEnable(u8),
+    IntDisable(u8),
+    SetVector(Interrupt),
+    Ei,
+    Di,
+    Reti,
+
     Clear,
     DrawColor(u8),
-    DrawColorReg(u8),
+    DrawColorReg(RegisterIndex),
     DrawSprite(u8),
-    DrawSpriteReg(u8),
+    DrawSpriteReg(RegisterIndex),
     MoveTo(u16),
     AddX(u8),
     AddY(u8),
     SubX(u8),
     SubY(u8),
-    SetXReg(u8),
-    SetYReg(u8),
+    SetXReg(RegisterIndex),
+    SetYReg(RegisterIndex),
+
     Jump(u16),
-    SkipIf { cond: Cond, reg_x: u8, reg_y: u8 },
-    SetReg { reg: u8, value: u8 },
-    Copy { reg_x: u8, reg_y: u8 },
+    JumpLong(u16),
     Call(u16),
+    CallLong(u16),
     Return,
+    SkipIf {
+        cond: Cond,
+        reg_x: RegisterIndex,
+        reg_y: RegisterIndex,
+    },
     SkipIfKey(u8),
-    Alu { op: AluOp, reg_x: u8, reg_y: u8 },
-    Random(u8),
+
+    SetReg {
+        reg: RegisterIndex,
+        value: u8,
+    },
+    SetRegLong {
+        reg: RegisterIndex,
+        value: u16,
+    },
+    Copy {
+        reg_x: RegisterIndex,
+        reg_y: RegisterIndex,
+    },
+    Alu {
+        op: AluOp,
+        reg_x: RegisterIndex,
+        reg_y: RegisterIndex,
+    },
+    Random(RegisterIndex),
     SetIndex(u16),
-    Halt,
+    SetIndexLong(u16),
 }
 
 impl Instr {
@@ -152,32 +268,70 @@ impl std::fmt::Display for Illegal {
     }
 }
 
-pub fn decode(raw: u16) -> Result<Instr, Illegal> {
-    let nib = |shift: u32| ((raw >> shift) & 0xF) as u8;
+pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
+    let nib = |shift: u32| ((raw >> shift) & 0xF) as RegisterIndex;
     let imm8 = (raw & 0x00FF) as u8;
     let addr = raw & 0x0FFF;
     let bad = Illegal(raw);
 
     Ok(match raw {
         0x0000 => Instr::Nop,
-        0x1000 => Instr::Clear,
+
+        0x0200..=0x020F => Instr::Load8(nib(0)),
+        0x0210..=0x021F => Instr::Store8(nib(0)),
+        0x0220..=0x022F => Instr::Load16(nib(0)),
+        0x0230..=0x023F => Instr::Store16(nib(0)),
+        0x0240..=0x024F => Instr::AddIndex(nib(0)),
+        0x0300..=0x030F => Instr::Push(nib(0)),
+        0x0310..=0x031F => Instr::Pop(nib(0)),
+        0x0400..=0x041F => Instr::SkipIfFlag {
+            flag: match nib(0) {
+                0 => Flag::Zero,
+                1 => Flag::Carry,
+                2 => Flag::Overflow,
+                3 => Flag::Negative,
+                4 => Flag::Collision,
+                _ => return Err(bad),
+            },
+            set: (raw & 0x0080) != 0,
+        },
+
+        0x01000 => Instr::Clear,
+
+        0x1100..=0x110F => Instr::TimerCount(nib(0)),
+        0x1110..=0x111F => Instr::TimerReload(nib(0)),
+        0x1120..=0x112F => Instr::TimerRead(nib(0)),
+        0x1130..=0x1133 => Instr::TimerConfig {
+            enable: (raw & 0x0002) != 0,
+            periodic: (raw & 0x0001) != 0,
+        },
+        0x1200..=0x120F => Instr::IntEnable(nib(0) as u8),
+        0x1210..=0x121F => Instr::IntDisable(nib(0) as u8),
+        0x1300..=0x130F => Instr::SetVector(Interrupt::from_index(nib(0) as u8).ok_or(bad)?),
+        0x1400 => Instr::Ei,
+        0x1401 => Instr::Di,
+
+        0x1500 => Instr::Wait,
+
         0x2000..=0x20FF => Instr::DrawColor(imm8),
         0x2100..=0x210F => Instr::DrawColorReg(nib(0)),
-        0x2E00..=0x2E0F => Instr::DrawSpriteReg(nib(0)),
-        0x2F00..=0x2FFF => Instr::DrawSprite(imm8),
+        0x2200..=0x22FF => Instr::DrawSprite(imm8),
+        0x2300..=0x230F => Instr::DrawSpriteReg(nib(0)),
+
         0x3000..=0x3FFF => Instr::MoveTo(addr),
         0x4000..=0x43FF => match nib(8) {
             0 => Instr::AddX(imm8),
-            1 => Instr::SubX(imm8),
-            2 => Instr::AddY(imm8),
+            1 => Instr::AddY(imm8),
+            2 => Instr::SubX(imm8),
             3 => Instr::SubY(imm8),
             _ => return Err(bad),
         },
         0x4A00..=0x4A0F => Instr::SetXReg(nib(0)),
-        0x4A10..=0x4A1F => Instr::SetYReg(nib(0)),
+        0x4B00..=0x4B0F => Instr::SetYReg(nib(0)),
+
         0x5000..=0x5FFF => Instr::Jump(addr),
         0x6000..=0x6FFF => Instr::SkipIf {
-            cond: Cond::from_u8(nib(8)).ok_or(bad)?,
+            cond: Cond::from_u8(nib(8) as u8).ok_or(bad)?,
             reg_x: nib(4),
             reg_y: nib(0),
         },
@@ -186,19 +340,31 @@ pub fn decode(raw: u16) -> Result<Instr, Illegal> {
             value: imm8,
         },
         0x8000..=0x80FF => Instr::Copy {
-            reg_x: nib(0),
-            reg_y: nib(4),
+            reg_x: nib(4),
+            reg_y: nib(0),
         },
         0x9000..=0x9FFF => Instr::Call(addr),
+
         0xA000 => Instr::Return,
-        0xB000..=0xB00F => Instr::SkipIfKey(nib(0)),
+        0xA001 => Instr::Reti,
+
+        0xB000..=0xB00F => Instr::SkipIfKey(nib(0) as u8),
         0xC000..=0xCFFF => Instr::Alu {
-            op: AluOp::from_u8(nib(8)).ok_or(bad)?,
+            op: AluOp::from_u8(nib(8) as u8).ok_or(bad)?,
             reg_x: nib(4),
             reg_y: nib(0),
         },
         0xD000..=0xD00F => Instr::Random(nib(0)),
         0xE000..=0xEFFF => Instr::SetIndex(addr),
+
+        0xF000 => Instr::JumpLong(extra),
+        0xF100 => Instr::CallLong(extra),
+        0xF200 => Instr::SetIndexLong(extra),
+        0xF300..=0xF30F => Instr::SetRegLong {
+            reg: nib(0),
+            value: extra,
+        },
+
         0xFFFF => Instr::Halt,
         _ => return Err(bad),
     })

@@ -1,4 +1,8 @@
-use crate::{constants::*, memory::Memory};
+use crate::{
+    constants::*,
+    instructions::{AluOut, Flag},
+    memory::Memory,
+};
 
 pub const REGISTER_COUNT: usize = 16;
 
@@ -8,11 +12,50 @@ pub enum StackFault {
     Underflow,
 }
 
+pub struct Flags {
+    pub zero: bool,
+    pub carry: bool,
+    pub overflow: bool,
+    pub negative: bool,
+    pub collision: bool,
+}
+
+impl Flags {
+    pub fn new() -> Self {
+        Flags {
+            zero: false,
+            carry: false,
+            overflow: false,
+            negative: false,
+            collision: false,
+        }
+    }
+
+    pub fn get(&self, flag: Flag) -> bool {
+        match flag {
+            Flag::Zero => self.zero,
+            Flag::Carry => self.carry,
+            Flag::Overflow => self.overflow,
+            Flag::Negative => self.negative,
+            Flag::Collision => self.collision,
+        }
+    }
+
+    pub fn set_from_alu(&mut self, alu_out: &AluOut) {
+        self.zero = alu_out.result == 0;
+        self.carry = alu_out.carry;
+        self.overflow = alu_out.overflow;
+        self.negative = (alu_out.result & 0x8000) != 0;
+    }
+}
+
 pub struct Cpu {
     pub registers: [u16; REGISTER_COUNT],
     pub pc: u16,
     pub sp: u16,
     pub index: u16,
+    pub waiting: bool,
+    pub flags: Flags,
 }
 
 impl Cpu {
@@ -22,6 +65,8 @@ impl Cpu {
             pc: 0x0900,
             sp: 0xFFFF,
             index: 0x0200,
+            waiting: false,
+            flags: Flags::new(),
         }
     }
 
