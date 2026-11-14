@@ -88,9 +88,9 @@ impl Cpu {
         }
 
         self.sp = self.sp.wrapping_add(1);
-        let low = mem.read_byte(self.sp) as u16;
-        self.sp = self.sp.wrapping_add(1);
         let high = mem.read_byte(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+        let low = mem.read_byte(self.sp) as u16;
         Ok((high << 8) | low)
     }
 }

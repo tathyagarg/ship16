@@ -60,19 +60,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     emulator.start();
     emulator.load_rom(
         &[
-            0x3000, // 0900 MOVE_TO #000
-            0x7000, // 0902 MOV R0, 0
-            0x7F01, // 0904 MOV RF, 1
-            0x7E3F, // 0906 MOV RE, 63
-            0x7D40, // 0908 MOV RD, 64
-            0xD001, // 090A RAND R1
-            0x2101, // 090C DRWR R1
-            0x610E, // 090E SKP<NE> R0, RE
-            0x4101, // 0910 INCY 1
-            0x4001, // 0912 INCX 1
-            0xC00F, // 0914 ADD R0, RF
-            0xC40D, // 0916 REM R0, RD
-            0x590A, // 0918 JUMP 090A
+            0x5910, 0x2101, 0x610E, 0x4101, 0x4001, 0xC00F, 0xC40D, 0xA000, 0x3000, 0x1000, 0x7000,
+            0x7F01, 0x7E3F, 0x7D40, 0xE92A, 0x1302, 0x1204, 0x1400, 0xD001, 0x9902, 0x5924, 0x71E0,
+            0x9902, 0x592C,
         ]
         .map(|word: u16| word.to_le_bytes())
         .concat(),
