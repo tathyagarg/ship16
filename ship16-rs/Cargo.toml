@@ -1,0 +1,10 @@
+[package]
+name = "ship16-rs"
+version = "0.1.0"
+authors = ["Tathya Garg <me@arson.dev>"]
+edition = "2024"
+rust-version = "1.99"
+description = "An emulator for a custom 8-bit architecture called Ship8."
+
+[dependencies]
+crossterm = "0.29.0"
