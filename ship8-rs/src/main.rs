@@ -10,6 +10,7 @@ use crossterm::{
     execute, terminal,
 };
 
+pub(crate) mod constants;
 pub(crate) mod cpu;
 pub(crate) mod input;
 pub(crate) mod interrupt;
@@ -452,21 +453,39 @@ impl Emulator {
             0x9000..=0x9FFF => {
                 let address = instruction & 0x0FFF;
                 trace!(self, "CALL [{:04X}], address: {:03X}", initial_pc, address);
-                self.memory.push_to_stack_u16(&mut self.cpu.sp, self.cpu.pc);
+                if self.cpu.push_u16(&mut self.memory, self.cpu.pc).is_err() {
+                    self.running = false;
+                    return 1;
+                }
                 self.cpu.pc = address;
                 4
             }
             0xA000 => {
-                let ret_address = self.memory.pop_from_stack_u16(&mut self.cpu.sp);
-                self.log(
-                    format!(
-                        "RETURN [{:04X}], returning to address: {:03X}",
-                        initial_pc, ret_address
-                    )
-                    .as_str(),
-                );
-                self.cpu.pc = ret_address;
-                4
+                let ret_address = self.cpu.pop_u16(&self.memory);
+                match ret_address {
+                    Ok(addr) => {
+                        self.log(
+                            format!(
+                                "RETURN [{:04X}], returning to address: {:03X}",
+                                initial_pc, addr
+                            )
+                            .as_str(),
+                        );
+                        self.cpu.pc = addr;
+                        4
+                    }
+                    Err(_) => {
+                        self.log(
+                            format!(
+                                "RETURN [{:04X}], stack underflow, cannot return",
+                                initial_pc
+                            )
+                            .as_str(),
+                        );
+                        self.running = false;
+                        1
+                    }
+                }
             }
             0xB000..=0xB00F => {
                 let keycode = (instruction & 0x000F) as u8;
@@ -573,6 +592,25 @@ impl Emulator {
                 }
             }
 
+            // self.log("Memory state before instruction execution:");
+            // let mem = self.memory.all_data().to_vec();
+            // for (i, _) in mem.iter().step_by(16).enumerate() {
+            //     let start = i * 16;
+            //     let end = std::cmp::min(start + 16, mem.len());
+            //     let line = &mem[start..end];
+            //     self.log(
+            //         format!(
+            //             "{:04X}: {}",
+            //             start,
+            //             line.iter()
+            //                 .map(|b| format!("{:02X}", b))
+            //                 .collect::<Vec<String>>()
+            //                 .join(" ")
+            //         )
+            //         .as_str(),
+            //     );
+            // }
+
             let cycles = self.execute_instruction();
 
             self.tick(cycles);
@@ -580,7 +618,7 @@ impl Emulator {
             if self.interrupt_controller.is_any_interrupt_pending() {
                 while let Some(interrupt) = self.interrupt_controller.get_pending_interrupt() {
                     if interrupt == 0 {
-                        let vram = &self.memory.ram[0..0x2000];
+                        let vram = self.memory.vram();
                         render(vram, &mut self.frame, self.truecolor)?;
 
                         let mut stdout = std::io::stdout().lock();
