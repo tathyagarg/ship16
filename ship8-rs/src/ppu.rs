@@ -6,7 +6,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub const TICKS_PER_FRAME: u64 = 73792;
+    pub const TICKS_PER_FRAME: u64 = 16667;
 
     pub fn new() -> Self {
         Ppu {

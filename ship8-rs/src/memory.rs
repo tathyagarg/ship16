@@ -1,5 +1,5 @@
 pub const MEMORY_SIZE: usize = 0x4000;
-pub const ROM_SIZE: usize = 0xBFFF;
+pub const ROM_SIZE: usize = 0xC000;
 
 pub struct Memory {
     pub ram: [u8; MEMORY_SIZE],
@@ -65,8 +65,8 @@ impl Memory {
 
     pub fn read_byte(&self, address: u16) -> u8 {
         match address {
-            0x0000..=0xBFFE => self.rom[address as usize],
-            0xBFFF..=0xFFFF => self.ram[(address - 0xBFFF) as usize % MEMORY_SIZE],
+            0x0000..=0xBFFF => self.rom[address as usize],
+            0xC000..=0xFFFF => self.ram[(address - 0xC000) as usize],
         }
     }
 
@@ -80,11 +80,11 @@ impl Memory {
 
     pub fn write_byte(&mut self, address: u16, value: u8) {
         match address {
-            0x0000..=0xBFFE => {
+            0x0000..=0xBFFF => {
                 // ROM is read-only, ignore writes
             }
-            0xBFFF..=0xFFFF => {
-                self.ram[(address - 0xBFFF) as usize] = value;
+            0xC000..=0xFFFF => {
+                self.ram[(address - 0xC000) as usize] = value;
             }
         }
     }
