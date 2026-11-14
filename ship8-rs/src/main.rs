@@ -1,4 +1,5 @@
 use std::{
+    fmt::Write as FmtWrite,
     fs::File,
     io::{BufWriter, Write},
     time::Duration,
@@ -94,7 +95,11 @@ fn decode_keycode(keycode: KeyCode) -> Option<u8> {
     }
 }
 
-fn render(vram: &[u8], buffer: &mut String) -> Result<(), Box<dyn std::error::Error>> {
+fn render(
+    vram: &[u8],
+    buffer: &mut String,
+    truecolor: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     buffer.clear();
     buffer.push_str("\x1b[H┌");
     buffer.push_str(&"─".repeat(64));
@@ -107,7 +112,22 @@ fn render(vram: &[u8], buffer: &mut String) -> Result<(), Box<dyn std::error::Er
             let fg = vram[y * 64 + x];
             let bg = vram[(y + 1) * 64 + x];
             if last != Some((fg, bg)) {
-                buffer.push_str(&format!("\x1b[38;5;{}m\x1b[48;5;{}m", fg, bg));
+                if truecolor {
+                    let [fr, fg, fb] = PALETTE[fg as usize];
+                    let [br, bg, bb] = PALETTE[bg as usize];
+                    buffer.push_str(&format!(
+                        "\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m",
+                        fr, fg, fb, br, bg, bb
+                    ));
+                } else {
+                    let _ = write!(
+                        buffer,
+                        "\x1b[38;5;{}m\x1b[48;5;{}m",
+                        to_ansi256(fg),
+                        to_ansi256(bg)
+                    );
+                }
+
                 last = Some((fg, bg));
             }
             buffer.push('▀');
@@ -122,6 +142,29 @@ fn render(vram: &[u8], buffer: &mut String) -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
+const fn build_palette() -> [[u8; 3]; 256] {
+    let mut palette = [[0u8; 3]; 256];
+    let mut i = 0;
+    while i < 256 {
+        let r = ((i >> 5) & 0x07) * 255 / 7;
+        let g = ((i >> 2) & 0x07) * 255 / 7;
+        let b = (i & 0x03) * 255 / 3;
+        palette[i] = [r as u8, g as u8, b as u8];
+        i += 1;
+    }
+
+    palette
+}
+
+static PALETTE: [[u8; 3]; 256] = build_palette();
+
+fn to_ansi256(c: u8) -> u8 {
+    let [r, g, b] = PALETTE[c as usize];
+    let q = |v: u8| ((v as u16 * 5 + 127) / 255) as u8;
+
+    16 + q(r) * 36 + q(g) * 6 + q(b)
+}
+
 pub struct Emulator {
     cpu: cpu::Cpu,
     memory: memory::Memory,
@@ -134,6 +177,7 @@ pub struct Emulator {
     running: bool,
 
     frame: String,
+    truecolor: bool,
 }
 
 macro_rules! trace {
@@ -161,6 +205,9 @@ impl Emulator {
             running: false,
 
             frame: String::with_capacity(16 * 1024),
+            truecolor: std::env::var("COLORTERM")
+                .map(|v| v.contains("truecolor") || v.contains("24bit"))
+                .unwrap_or(false),
         }
     }
 
@@ -534,7 +581,7 @@ impl Emulator {
                 while let Some(interrupt) = self.interrupt_controller.get_pending_interrupt() {
                     if interrupt == 0 {
                         let vram = &self.memory.ram[0..0x2000];
-                        render(vram, &mut self.frame)?;
+                        render(vram, &mut self.frame, self.truecolor)?;
 
                         let mut stdout = std::io::stdout().lock();
                         stdout.write_all(self.frame.as_bytes())?;
