@@ -21,17 +21,19 @@ impl Timer {
         }
     }
 
-    pub fn tick(&mut self) -> bool {
+    pub fn tick_n(&mut self, n: u16) -> bool {
         if !self.enabled {
             return false;
         }
 
-        self.prescaler_accumulator += 1;
+        self.prescaler_accumulator += n;
 
         if self.prescaler_accumulator >= Self::PRESCALER {
+            let ticks = self.prescaler_accumulator / Self::PRESCALER;
             self.prescaler_accumulator %= Self::PRESCALER;
-            if self.counter > 0 {
-                self.counter -= 1;
+
+            if self.counter > ticks {
+                self.counter -= ticks;
             } else {
                 if self.periodic {
                     self.counter = self.reload_to;

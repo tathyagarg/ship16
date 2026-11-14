@@ -21,8 +21,8 @@ impl Ppu {
         self.y = (pos & 0x3F) as u8;
     }
 
-    pub fn tick(&mut self) -> bool {
-        self.counter += 1;
+    pub fn tick_n(&mut self, n: u64) -> bool {
+        self.counter += n;
         if self.counter >= Self::TICKS_PER_FRAME {
             self.counter -= Self::TICKS_PER_FRAME;
             return true;

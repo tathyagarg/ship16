@@ -6,8 +6,7 @@ use std::{
 
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
-    execute,
-    terminal::{self, Clear},
+    execute, terminal,
 };
 
 pub(crate) mod cpu;
@@ -95,6 +94,34 @@ fn decode_keycode(keycode: KeyCode) -> Option<u8> {
     }
 }
 
+fn render(vram: &[u8], buffer: &mut String) -> Result<(), Box<dyn std::error::Error>> {
+    buffer.clear();
+    buffer.push_str("\x1b[H┌");
+    buffer.push_str(&"─".repeat(64));
+    buffer.push_str("┐\r\n");
+
+    for y in (0..64).step_by(2) {
+        buffer.push_str("│");
+        let mut last: Option<(u8, u8)> = None;
+        for x in 0..64 {
+            let fg = vram[y * 64 + x];
+            let bg = vram[(y + 1) * 64 + x];
+            if last != Some((fg, bg)) {
+                buffer.push_str(&format!("\x1b[38;5;{}m\x1b[48;5;{}m", fg, bg));
+                last = Some((fg, bg));
+            }
+            buffer.push('▀');
+        }
+        buffer.push_str("\x1b[0m│\r\n");
+    }
+
+    buffer.push_str("└");
+    buffer.push_str(&"─".repeat(64));
+    buffer.push_str("┘\r\n");
+
+    Ok(())
+}
+
 pub struct Emulator {
     cpu: cpu::Cpu,
     memory: memory::Memory,
@@ -105,6 +132,8 @@ pub struct Emulator {
 
     interrupt_controller: interrupt::InterruptController,
     running: bool,
+
+    frame: String,
 }
 
 macro_rules! trace {
@@ -130,6 +159,8 @@ impl Emulator {
             logger,
             interrupt_controller: interrupt::InterruptController::new(),
             running: false,
+
+            frame: String::with_capacity(16 * 1024),
         }
     }
 
@@ -141,16 +172,14 @@ impl Emulator {
     }
 
     pub fn tick(&mut self, cycles: u32) {
-        for _ in 0..cycles {
-            if self.timer.tick() {
-                self.interrupt_controller
-                    .request_interrupt(interrupt::INTERRUPT_TIMER);
-            }
+        if self.timer.tick_n(cycles as u16) {
+            self.interrupt_controller
+                .request_interrupt(interrupt::INTERRUPT_TIMER);
+        }
 
-            if self.ppu.tick() {
-                self.interrupt_controller
-                    .request_interrupt(interrupt::INTERRUPT_VBLANK);
-            }
+        if self.ppu.tick_n(cycles as u64) {
+            self.interrupt_controller
+                .request_interrupt(interrupt::INTERRUPT_VBLANK);
         }
     }
 
@@ -505,32 +534,10 @@ impl Emulator {
                 while let Some(interrupt) = self.interrupt_controller.get_pending_interrupt() {
                     if interrupt == 0 {
                         let vram = &self.memory.ram[0..0x2000];
+                        render(vram, &mut self.frame)?;
 
-                        let mut stdout = std::io::stdout();
-                        execute!(
-                            stdout,
-                            crossterm::cursor::MoveTo(0, 0),
-                            Clear(terminal::ClearType::All)
-                        )?;
-
-                        print!("┌{}┐", ("─".repeat(64)));
-                        execute!(stdout, crossterm::cursor::MoveToNextLine(1))?;
-                        for y in 0..64 {
-                            if y % 2 == 1 {
-                                continue;
-                            }
-
-                            print!("│");
-                            for x in 0..64 {
-                                let fg = vram[y * 64 + x];
-                                let bg = vram[(y + 1) * 64 + x];
-                                print!("\x1b[38;5;{}m\x1b[48;5;{}m▀\x1b[0m", fg, bg);
-                            }
-                            print!("│");
-                            execute!(stdout, crossterm::cursor::MoveToNextLine(1))?;
-                        }
-                        print!("└{}┘", ("─".repeat(64)));
-                        execute!(stdout, crossterm::cursor::MoveToNextLine(1))?;
+                        let mut stdout = std::io::stdout().lock();
+                        stdout.write_all(self.frame.as_bytes())?;
                         stdout.flush()?;
                     } else if interrupt == 1 {
                         // println!("TIMER interrupt triggered");
