@@ -10,9 +10,15 @@ use crossterm::{
     execute, terminal,
 };
 
+use crate::{
+    constants::SCREEN_WIDTH,
+    instructions::{Instr, decode},
+};
+
 pub(crate) mod constants;
 pub(crate) mod cpu;
 pub(crate) mod input;
+pub(crate) mod instructions;
 pub(crate) mod interrupt;
 pub(crate) mod memory;
 pub(crate) mod ppu;
@@ -48,37 +54,6 @@ fn restore_terminal() {
         crossterm::cursor::Show,
     );
     let _ = terminal::disable_raw_mode();
-}
-
-fn decode_condition(cond: u8) -> fn(u16, u16) -> bool {
-    match cond {
-        0x00 => |x, y| x == y, // Equal
-        0x01 => |x, y| x != y, // Not equal
-        0x02 => |x, y| x < y,  // Less than
-        0x03 => |x, y| x > y,  // Greater than
-        0x04 => |x, y| x <= y, // Less than or equal
-        0x05 => |x, y| x >= y, // Greater than or equal
-        _ => |_x, _y| false,   // Always false
-    }
-}
-
-fn decode_arithmetic(op: u8) -> (fn(u16, u16) -> u16, u32) {
-    match op {
-        0x00 => (|x, y| x.wrapping_add(y), 1),
-        0x01 => (|x, y| x.wrapping_sub(y), 1),
-        0x02 => (|x, y| x.wrapping_mul(y), 3),
-        0x03 => (|x, y| if y == 0 { 0 } else { x.wrapping_div(y) }, 5),
-        0x04 => (|x, y| if y == 0 { 0 } else { x.wrapping_rem(y) }, 5),
-        0x05 => (|x, y| x & y, 1),
-        0x06 => (|x, y| x | y, 1),
-        0x07 => (|x, y| x ^ y, 1),
-        0x08 => (|x, _y| !x, 1),
-        0x09 => (|x, y| x.wrapping_shl(y as u32), 2),
-        0x0A => (|x, y| x.wrapping_shr(y as u32), 2),
-        0x0B => (|x, y| x.rotate_left(y as u32), 2),
-        0x0C => (|x, y| x.rotate_right(y as u32), 2),
-        _ => (|_x, _y| 0, 1), // Default case
-    }
 }
 
 fn decode_keycode(keycode: KeyCode) -> Option<u8> {
@@ -256,313 +231,94 @@ impl Emulator {
     }
 
     pub fn execute_instruction(&mut self) -> u32 {
-        let initial_pc = self.cpu.pc;
-        let instruction = self.memory.fetch_next_instruction(&mut self.cpu.pc);
-        match instruction {
-            0x0000 => {
-                // NOP
-                trace!(self, "NOP [{:04X}]", initial_pc);
-                1
-            }
-            0x1000 => {
-                trace!(self, "CLEAR [{:04X}]", initial_pc);
-                self.clear_buffer();
-                4097
-            }
-            0x2000..=0x20FF => {
-                let color = (instruction & 0x00FF) as u8;
-                trace!(
-                    self,
-                    "DRAW_COLOR [{:04X}], color: {:02X}", initial_pc, color
-                );
-                self.draw_color(color);
-                2
-            }
-            0x2100..=0x210F => {
-                let x = instruction & 0x000F;
-                let reg_x = self.cpu.registers[x as usize];
-                self.log(
-                    format!(
-                        "DRAW_COLOR_REG [{:04X}], reg[{}]: {:02X}",
-                        initial_pc, x, reg_x
-                    )
-                    .as_str(),
-                );
-                self.draw_color(reg_x as u8);
-                2
-            }
-            0x2E00..=0x2E0F => {
-                let reg_index = (instruction & 0x000F) as usize;
-                let sprite_index = self.cpu.registers[reg_index] as u8;
-                self.log(
-                    format!(
-                        "DRAW_SPRITE_REG [{:04X}], reg[{}]: {:02X}",
-                        initial_pc, reg_index, sprite_index
-                    )
-                    .as_str(),
-                );
-                self.draw_sprite(sprite_index);
-                66
-            }
-            0x2F00..=0x2FFF => {
-                let sprite_index = (instruction & 0x00FF) as u8;
-                self.log(
-                    format!(
-                        "DRAW_SPRITE [{:04X}], sprite_index: {:02X}",
-                        initial_pc, sprite_index
-                    )
-                    .as_str(),
-                );
-                self.draw_sprite(sprite_index);
-                66
-            }
-            0x3000..=0x3FFF => {
-                self.log(
-                    format!(
-                        "MOVE_TO [{:04X}], pos: {:03X}",
-                        initial_pc,
-                        instruction & 0x0FFF
-                    )
-                    .as_str(),
-                );
-                self.ppu.move_to_decode(instruction & 0x0FFF);
-                2
-            }
-            0x4000..=0x43FF => {
-                let subinstr = (instruction >> 8) & 0x0F;
-                let value = (instruction & 0x00FF) as u8;
-                self.log(
-                    format!(
-                        "MOVE [{:04X}], subinstr: {:01X}, value: {:02X}",
-                        initial_pc, subinstr, value
-                    )
-                    .as_str(),
-                );
-                match subinstr {
-                    0x00 => self.ppu.x = self.ppu.x.wrapping_add(value) % 64,
-                    0x01 => self.ppu.x = self.ppu.x.wrapping_sub(value) % 64,
-                    0x02 => self.ppu.y = self.ppu.y.wrapping_add(value) % 64,
-                    0x03 => self.ppu.y = self.ppu.y.wrapping_sub(value) % 64,
-                    _ => unreachable!(),
-                }
+        const W: u8 = SCREEN_WIDTH as u8;
 
-                2
-            }
-            0x4A00..=0x4A0F => {
-                let reg_index = (instruction & 0x000F) as usize;
-                let value = self.cpu.registers[reg_index];
-                self.log(
-                    format!(
-                        "SET_X [{:04X}], reg[{}]: {:02X}",
-                        initial_pc,
-                        reg_index,
-                        value % 64
-                    )
-                    .as_str(),
-                );
-                self.ppu.x = (value % 64) as u8;
-                2
-            }
-            0x4A10..=0x4A1F => {
-                let reg_index = (instruction & 0x000F) as usize;
-                let value = self.cpu.registers[reg_index];
+        let pc = self.cpu.pc;
+        let word = self.memory.read_u16(pc);
+        self.cpu.pc = self.cpu.pc.wrapping_add(2);
 
-                self.log(
-                    format!(
-                        "SET_Y [{:04X}], reg[{}]: {:02X}",
-                        initial_pc,
-                        reg_index,
-                        value % 64
-                    )
-                    .as_str(),
-                );
-                self.ppu.y = (value % 64) as u8;
-                2
-            }
-            0x5000..=0x5FFF => {
-                let address = instruction & 0x0FFF;
-                trace!(self, "JUMP [{:04X}], address: {:03X}", initial_pc, address);
-                self.cpu.pc = address;
-                2
-            }
-            0x6000..=0x6FFF => {
-                let cond = (instruction >> 8) & 0x0F;
-                let x = (instruction >> 4) & 0x0F;
-                let y = instruction & 0x0F;
-
-                let cond_function = decode_condition(cond as u8);
-                let rx = self.cpu.registers[x as usize];
-                let ry = self.cpu.registers[y as usize];
-
-                if cond_function(rx, ry) {
-                    self.cpu.pc = self.cpu.pc.wrapping_add(2);
-                    self.log(
-                        format!(
-                            "CONDITIONAL_JUMP [{:04X}], condition met, reg[{}]: {:02X}, reg[{}]: {:02X}",
-                            initial_pc,
-                            x,
-                            rx,
-                            y,
-                            ry
-                        )
-                        .as_str(),
-                    );
-                    3
-                } else {
-                    self.log(
-                        format!(
-                            "CONDITIONAL_JUMP [{:04X}], condition not met, reg[{}]: {:02X}, reg[{}]: {:02X}",
-                            initial_pc,
-                            x,
-                            rx,
-                            y,
-                            ry
-                        )
-                        .as_str(),
-                    );
-                    2
-                }
-            }
-            0x7000..=0x7FFF => {
-                let reg_index = ((instruction >> 8) & 0x0F) as usize;
-                let value = instruction & 0x00FF;
-                self.log(
-                    format!(
-                        "SET_REGISTER [{:04X}], reg[{}]: {:02X}",
-                        initial_pc, reg_index, value
-                    )
-                    .as_str(),
-                );
-                self.cpu.registers[reg_index] = value;
-                2
-            }
-            0x8000..=0x80FF => {
-                let src_index = instruction & 0x0F;
-                let dst_index = (instruction >> 4) & 0x0F;
-
-                self.log(
-                    format!(
-                        "COPY_REGISTER [{:04X}], reg[{}]: {:02X} -> reg[{}]",
-                        initial_pc, src_index, self.cpu.registers[src_index as usize], dst_index
-                    )
-                    .as_str(),
-                );
-                self.cpu.registers[dst_index as usize] = self.cpu.registers[src_index as usize];
-                1
-            }
-            0x9000..=0x9FFF => {
-                let address = instruction & 0x0FFF;
-                trace!(self, "CALL [{:04X}], address: {:03X}", initial_pc, address);
-                if self.cpu.push_u16(&mut self.memory, self.cpu.pc).is_err() {
-                    self.running = false;
-                    return 1;
-                }
-                self.cpu.pc = address;
-                4
-            }
-            0xA000 => {
-                let ret_address = self.cpu.pop_u16(&self.memory);
-                match ret_address {
-                    Ok(addr) => {
-                        self.log(
-                            format!(
-                                "RETURN [{:04X}], returning to address: {:03X}",
-                                initial_pc, addr
-                            )
-                            .as_str(),
-                        );
-                        self.cpu.pc = addr;
-                        4
-                    }
-                    Err(_) => {
-                        self.log(
-                            format!(
-                                "RETURN [{:04X}], stack underflow, cannot return",
-                                initial_pc
-                            )
-                            .as_str(),
-                        );
-                        self.running = false;
-                        1
-                    }
-                }
-            }
-            0xB000..=0xB00F => {
-                let keycode = (instruction & 0x000F) as u8;
-                if self.input.is_pressed(keycode) {
-                    self.cpu.pc = self.cpu.pc.wrapping_add(2);
-                    self.log(
-                        format!(
-                            "WAIT_FOR_KEY [{:04X}], keycode: {:02X} is pressed, skipping next instruction",
-                            initial_pc,
-                            keycode
-                        )
-                        .as_str(),
-                    );
-                    3
-                } else {
-                    self.log(
-                        format!(
-                            "WAIT_FOR_KEY [{:04X}], keycode: {:02X} is not pressed, waiting",
-                            initial_pc, keycode
-                        )
-                        .as_str(),
-                    );
-                    2
-                }
-            }
-            0xC000..=0xCFFF => {
-                let instr = (instruction >> 8) & 0x0F;
-                let x = (instruction >> 4) & 0x0F;
-                let y = instruction & 0x0F;
-
-                let rx = self.cpu.registers[x as usize];
-                let ry = self.cpu.registers[y as usize];
-
-                let (arithmetic_function, cycles) = decode_arithmetic(instr as u8);
-                let result = arithmetic_function(rx, ry);
-                self.log(
-                    format!(
-                        "ARITHMETIC [{:04X}], reg[{}]: {:02X}, reg[{}]: {:02X}, result: {:02X}",
-                        initial_pc, x, rx, y, ry, result
-                    )
-                    .as_str(),
-                );
-                self.cpu.registers[x as usize] = result;
-                cycles
-            }
-            0xD000..=0xD00F => {
-                let random_num = rand::random::<u8>();
-                let reg_index = (instruction & 0x000F) as usize;
-                self.log(
-                    format!(
-                        "RANDOM [{:04X}], random number: {:02X} stored in reg[{}]",
-                        initial_pc, random_num, reg_index
-                    )
-                    .as_str(),
-                );
-                self.cpu.registers[reg_index] = random_num as u16;
-                2
-            }
-            0xE000..=0xEFFF => {
-                let address = instruction & 0x0FFF;
-                self.log(
-                    format!(
-                        "SET_INDEX [{:04X}], index set to address: {:03X}",
-                        initial_pc, address
-                    )
-                    .as_str(),
-                );
-                self.cpu.index = address;
-                2
-            }
-            0xFFFF => {
+        let instr = match decode(word) {
+            Ok(instr) => instr,
+            Err(e) => {
+                self.log(&format!("Error decoding instruction at {:04X}: {}", pc, e));
                 self.running = false;
-                trace!(self, "HALT [{:04X}]", initial_pc);
-                1
+                return 1;
             }
-            _ => todo!("Instruction {:04X} not implemented", instruction),
+        };
+        trace!(self, "[{pc:04X}] {instr:?}");
+        let mut skip = false;
+
+        match instr {
+            Instr::Nop => {}
+            Instr::Clear => self.memory.clear_buffer(),
+            Instr::DrawColor(c) => self.draw_color(c),
+            Instr::DrawColorReg(r) => self.draw_color(self.cpu.registers[r as usize] as u8),
+            Instr::DrawSprite(i) => self.draw_sprite(i),
+            Instr::DrawSpriteReg(r) => self.draw_sprite(self.cpu.registers[r as usize] as u8),
+            Instr::MoveTo(p) => self.ppu.move_to_decode(p),
+            Instr::AddX(v) => self.ppu.x = self.ppu.x.wrapping_add(v) % W,
+            Instr::SubX(v) => self.ppu.x = self.ppu.x.wrapping_sub(v) % W,
+            Instr::AddY(v) => self.ppu.y = self.ppu.y.wrapping_add(v) % W,
+            Instr::SubY(v) => self.ppu.y = self.ppu.y.wrapping_sub(v) % W,
+            Instr::SetXReg(r) => self.ppu.x = (self.cpu.registers[r as usize] % u16::from(W)) as u8,
+            Instr::SetYReg(r) => self.ppu.y = (self.cpu.registers[r as usize] % u16::from(W)) as u8,
+            Instr::Jump(a) => self.cpu.pc = a,
+            Instr::SkipIf {
+                cond,
+                reg_x: x,
+                reg_y: y,
+            } => {
+                skip = cond.eval(
+                    self.cpu.registers[x as usize],
+                    self.cpu.registers[y as usize],
+                );
+            }
+            Instr::SetReg { reg, value } => self.cpu.registers[reg as usize] = value as u16,
+            Instr::Copy {
+                reg_x: src,
+                reg_y: dst,
+            } => {
+                self.cpu.registers[dst as usize] = self.cpu.registers[src as usize];
+            }
+            Instr::Call(a) => {
+                let ret = self.cpu.pc;
+                match self.cpu.push_u16(&mut self.memory, ret) {
+                    Ok(()) => self.cpu.pc = a,
+                    Err(e) => {
+                        trace!(self, "[{pc:04X}] {e:?}");
+                        self.running = false;
+                    }
+                }
+            }
+            Instr::Return => match self.cpu.pop_u16(&self.memory) {
+                Ok(a) => self.cpu.pc = a,
+                Err(e) => {
+                    trace!(self, "[{pc:04X}] {e:?}");
+                    self.running = false;
+                }
+            },
+            Instr::SkipIfKey(k) => skip = self.input.is_pressed(k),
+            Instr::Alu {
+                op,
+                reg_x: x,
+                reg_y: y,
+            } => {
+                let r = op.eval(
+                    self.cpu.registers[x as usize],
+                    self.cpu.registers[y as usize],
+                );
+                self.cpu.registers[x as usize] = r;
+            }
+            Instr::Random(r) => self.cpu.registers[r as usize] = rand::random::<u8>() as u16,
+            Instr::SetIndex(a) => self.cpu.index = a,
+            Instr::Halt => self.running = false,
         }
+
+        if skip {
+            self.cpu.pc = self.cpu.pc.wrapping_add(2);
+        }
+
+        instr.base_cycles() + (skip as u32)
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -591,25 +347,6 @@ impl Emulator {
                     }
                 }
             }
-
-            // self.log("Memory state before instruction execution:");
-            // let mem = self.memory.all_data().to_vec();
-            // for (i, _) in mem.iter().step_by(16).enumerate() {
-            //     let start = i * 16;
-            //     let end = std::cmp::min(start + 16, mem.len());
-            //     let line = &mem[start..end];
-            //     self.log(
-            //         format!(
-            //             "{:04X}: {}",
-            //             start,
-            //             line.iter()
-            //                 .map(|b| format!("{:02X}", b))
-            //                 .collect::<Vec<String>>()
-            //                 .join(" ")
-            //         )
-            //         .as_str(),
-            //     );
-            // }
 
             let cycles = self.execute_instruction();
 

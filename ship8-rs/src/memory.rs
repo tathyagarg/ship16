@@ -107,16 +107,10 @@ impl Memory {
         Ok(())
     }
 
-    pub fn fetch_instruction(&self, address: u16) -> u16 {
+    pub fn read_u16(&self, address: u16) -> u16 {
         let low = self.read_byte(address) as u16;
         let high = self.read_byte(address.wrapping_add(1)) as u16;
         (high << 8) | low
-    }
-
-    pub fn fetch_next_instruction(&self, pc: &mut u16) -> u16 {
-        let instruction = self.fetch_instruction(*pc);
-        *pc = pc.wrapping_add(2);
-        instruction
     }
 
     pub fn clear_buffer(&mut self) {

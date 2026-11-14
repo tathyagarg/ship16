@@ -2,6 +2,7 @@ use crate::{constants::*, memory::Memory};
 
 pub const REGISTER_COUNT: usize = 16;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StackFault {
     Overflow,
     Underflow,

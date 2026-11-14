@@ -1,3 +1,5 @@
+use crate::constants::CYCLES_PER_FRAME;
+
 pub struct Ppu {
     pub x: u8,
     pub y: u8,
@@ -6,8 +8,6 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub const TICKS_PER_FRAME: u64 = 16667;
-
     pub fn new() -> Self {
         Ppu {
             x: 0,
@@ -23,8 +23,8 @@ impl Ppu {
 
     pub fn tick_n(&mut self, n: u64) -> bool {
         self.counter += n;
-        if self.counter >= Self::TICKS_PER_FRAME {
-            self.counter -= Self::TICKS_PER_FRAME;
+        if self.counter >= CYCLES_PER_FRAME {
+            self.counter %= CYCLES_PER_FRAME;
             return true;
         }
         false
