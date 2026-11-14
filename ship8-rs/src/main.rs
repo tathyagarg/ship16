@@ -198,7 +198,7 @@ impl Emulator {
     pub fn draw_sprite(&mut self, sprite_index: u8) {
         let sprite_data = self
             .memory
-            .read_bytes(self.cpu.index + (64 * sprite_index as u16), 64);
+            .read_sprite((self.cpu.index + (64 * sprite_index as u16)) as usize);
 
         for (i, &color) in sprite_data.iter().enumerate() {
             let x = (self.ppu.x + (i as u8 % 8)) % 64;

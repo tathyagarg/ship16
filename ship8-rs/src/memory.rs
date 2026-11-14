@@ -70,12 +70,11 @@ impl Memory {
         }
     }
 
-    pub fn read_bytes(&self, address: u16, length: usize) -> Vec<u8> {
-        let mut result = Vec::with_capacity(length);
-        for i in 0..length {
-            result.push(self.read_byte(address.wrapping_add(i as u16)));
-        }
-        result
+    pub fn read_sprite(&self, start_address: usize) -> [u8; 64] {
+        let end_address = start_address + 64;
+        self.rom[start_address..end_address]
+            .try_into()
+            .expect("Failed to read sprite data")
     }
 
     pub fn write_byte(&mut self, address: u16, value: u8) {
