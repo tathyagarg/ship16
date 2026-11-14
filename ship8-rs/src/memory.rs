@@ -113,11 +113,6 @@ impl Memory {
         (high << 8) | low
     }
 
-    pub fn clear_buffer(&mut self) {
-        // Clear bytes from 0xBFFF to 0xDFFE
-        self.0[RAM_BASE..RAM_BASE + VRAM_SIZE].fill(0);
-    }
-
     pub fn draw_color(&mut self, color: u8, x: u8, y: u8) {
         let index = (y as usize * 64 + x as usize) % VRAM_SIZE;
         self.0[RAM_BASE + index] = color;

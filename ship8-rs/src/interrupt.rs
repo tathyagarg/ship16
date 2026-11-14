@@ -62,10 +62,6 @@ impl InterruptController {
         self.requested |= interrupt.bit();
     }
 
-    pub fn clear_interrupt(&mut self, interrupt: Interrupt) {
-        self.requested &= !interrupt.bit();
-    }
-
     pub fn has_pending(&self) -> bool {
         (self.requested & self.enabled) != 0
     }

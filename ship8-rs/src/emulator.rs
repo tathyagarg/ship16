@@ -1,17 +1,10 @@
 use std::{
-    fmt::Write as FmtWrite,
     fs::File,
     io::{BufWriter, Write},
-    time::Duration,
-};
-
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
-    execute, terminal,
 };
 
 use crate::{
-    constants::{INTERRUPT_ENTRY_CYCLES, SCREEN_WIDTH},
+    constants::INTERRUPT_ENTRY_CYCLES,
     cpu, input,
     instructions::{Instr, decode},
     interrupt::{self, Interrupt},
@@ -32,10 +25,6 @@ pub struct Rng(u32);
 impl Rng {
     fn new() -> Self {
         Rng(0xDEADBEEF)
-    }
-
-    fn new_from(seed: u32) -> Self {
-        Rng(seed)
     }
 
     fn next_u8(&mut self) -> u8 {
@@ -167,8 +156,6 @@ impl Emulator {
     }
 
     pub fn execute_instruction(&mut self) -> u32 {
-        const W: u8 = SCREEN_WIDTH as u8;
-
         let pc = self.cpu.pc;
         let word = self.memory.read_u16(pc);
         let ext = self.memory.read_u16(pc.wrapping_add(2));
@@ -208,6 +195,10 @@ impl Emulator {
                 self.memory.write_byte(self.cpu.index, (value & 0xFF) as u8);
                 self.memory
                     .write_byte(self.cpu.index.wrapping_add(1), (value >> 8) as u8);
+            }
+            Instr::AddIndex(reg_x) => {
+                let value = self.cpu.registers[reg_x];
+                self.cpu.index = self.cpu.index.wrapping_add(value);
             }
 
             Instr::Push(reg_x) => {
@@ -299,7 +290,6 @@ impl Emulator {
             }
             Instr::Random(r) => self.cpu.registers[r as usize] = self.rng.next_u8() as u16,
             Instr::SetIndex(address) | Instr::SetIndexLong(address) => self.cpu.index = address,
-            _ => todo!(),
         }
 
         if skip {

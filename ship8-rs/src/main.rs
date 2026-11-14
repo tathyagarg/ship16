@@ -1,20 +1,8 @@
-use std::{
-    fmt::Write as FmtWrite,
-    fs::File,
-    io::{BufWriter, Write},
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
-    execute,
-};
+use crossterm::execute;
 
-use crate::{
-    constants::*,
-    emulator::Emulator,
-    instructions::{Instr, decode},
-};
+use crate::{constants::*, emulator::Emulator};
 
 pub(crate) mod constants;
 pub(crate) mod cpu;
