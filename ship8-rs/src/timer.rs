@@ -15,7 +15,7 @@ impl Timer {
         Timer {
             enabled: true,
             periodic: false,
-            counter: 1000,
+            counter: 0,
             reload_to: 0,
             prescaler_accumulator: 0,
         }

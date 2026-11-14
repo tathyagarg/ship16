@@ -73,7 +73,7 @@ impl Memory {
     pub fn read_bytes(&self, address: u16, length: usize) -> Vec<u8> {
         let mut result = Vec::with_capacity(length);
         for i in 0..length {
-            result.push(self.read_byte(address + i as u16));
+            result.push(self.read_byte(address.wrapping_add(i as u16)));
         }
         result
     }
@@ -89,14 +89,22 @@ impl Memory {
         }
     }
 
-    pub fn load_rom(&mut self, data: &[u8]) {
+    pub fn load_rom(&mut self, data: &[u8]) -> Result<(), String> {
         let len = data.len().min(ROM_SIZE - 0x0900);
+        if len < data.len() {
+            return Err(format!(
+                "ROM data is too large. Max size is {} bytes.",
+                ROM_SIZE - 0x0900
+            ));
+        }
         self.rom[0x0900..0x0900 + len].copy_from_slice(&data[..len]);
+
+        Ok(())
     }
 
     pub fn fetch_instruction(&self, address: u16) -> u16 {
         let low = self.read_byte(address) as u16;
-        let high = self.read_byte(address + 1) as u16;
+        let high = self.read_byte(address.wrapping_add(1)) as u16;
         (high << 8) | low
     }
 
@@ -108,11 +116,11 @@ impl Memory {
 
     pub fn clear_buffer(&mut self) {
         // Clear bytes from 0xBFFF to 0xDFFE
-        self.ram[0..=0x1FFF].fill(0);
+        self.ram[0..=0x1000].fill(0);
     }
 
     pub fn draw_color(&mut self, color: u8, x: u8, y: u8) {
-        let index = (y as usize * 64 + x as usize) % 0x2000;
+        let index = (y as usize * 64 + x as usize) % 0x1000;
         self.ram[index] = color;
     }
 

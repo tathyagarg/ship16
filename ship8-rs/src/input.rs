@@ -19,6 +19,8 @@ impl Input {
     }
 
     pub fn is_pressed(&self, key: u8) -> bool {
+        assert!(key < 16, "Key index out of bounds");
+
         let mask = 1u16 << key;
         self.0 & mask != 0
     }

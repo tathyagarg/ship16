@@ -13,6 +13,38 @@ pub(crate) mod memory;
 pub(crate) mod ppu;
 pub(crate) mod timer;
 
+struct TerminalGuard;
+
+impl TerminalGuard {
+    fn new() -> std::io::Result<Self> {
+        terminal::enable_raw_mode()?;
+        execute!(
+            std::io::stdout(),
+            terminal::EnterAlternateScreen,
+            crossterm::cursor::Hide
+        )?;
+        Ok(TerminalGuard)
+    }
+}
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        restore_terminal();
+    }
+}
+
+fn restore_terminal() {
+    let _ = execute!(
+        std::io::stdout(),
+        terminal::LeaveAlternateScreen,
+        crossterm::cursor::Show,
+        crossterm::event::PushKeyboardEnhancementFlags(
+            crossterm::event::KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+        )
+    );
+    let _ = terminal::disable_raw_mode();
+}
+
 fn decode_condition(cond: u8) -> fn(u16, u16) -> bool {
     match cond {
         0x00 => |x, y| x == y, // Equal
@@ -21,7 +53,7 @@ fn decode_condition(cond: u8) -> fn(u16, u16) -> bool {
         0x03 => |x, y| x > y,  // Greater than
         0x04 => |x, y| x <= y, // Less than or equal
         0x05 => |x, y| x >= y, // Greater than or equal
-        _ => panic!("Invalid condition code: {}", cond),
+        _ => |_x, _y| false,   // Always false
     }
 }
 
@@ -30,17 +62,17 @@ fn decode_arithmetic(op: u8) -> (fn(u16, u16) -> u16, u32) {
         0x00 => (|x, y| x.wrapping_add(y), 1),
         0x01 => (|x, y| x.wrapping_sub(y), 1),
         0x02 => (|x, y| x.wrapping_mul(y), 3),
-        0x03 => (|x, y| x.wrapping_div(y), 5),
-        0x04 => (|x, y| x.wrapping_rem(y), 5),
+        0x03 => (|x, y| if y == 0 { 0 } else { x.wrapping_div(y) }, 5),
+        0x04 => (|x, y| if y == 0 { 0 } else { x.wrapping_rem(y) }, 5),
         0x05 => (|x, y| x & y, 1),
         0x06 => (|x, y| x | y, 1),
         0x07 => (|x, y| x ^ y, 1),
         0x08 => (|x, _y| !x, 1),
-        0x09 => (|x, y| x << y, 2),
-        0x0A => (|x, y| x >> y, 2),
+        0x09 => (|x, y| x.wrapping_shl(y as u32), 2),
+        0x0A => (|x, y| x.wrapping_shr(y as u32), 2),
         0x0B => (|x, y| x.rotate_left(y as u32), 2),
         0x0C => (|x, y| x.rotate_right(y as u32), 2),
-        _ => panic!("Invalid arithmetic operation code: {}", op),
+        _ => (|_x, _y| 0, 1), // Default case
     }
 }
 
@@ -131,23 +163,22 @@ impl Emulator {
     }
 
     pub fn execute_instruction(&mut self) -> u32 {
+        let initial_pc = self.cpu.pc;
         let instruction = self.memory.fetch_next_instruction(&mut self.cpu.pc);
         match instruction {
             0x0000 => {
                 // NOP
-                self.log(format!("NOP [{:04X}]", self.cpu.pc - 2).as_str());
+                self.log(format!("NOP [{:04X}]", initial_pc).as_str());
                 1
             }
             0x1000 => {
-                self.log(format!("CLEAR [{:04X}]", self.cpu.pc - 2).as_str());
+                self.log(format!("CLEAR [{:04X}]", initial_pc).as_str());
                 self.clear_buffer();
                 4097
             }
             0x2000..=0x20FF => {
                 let color = (instruction & 0x00FF) as u8;
-                self.log(
-                    format!("DRAW_COLOR [{:04X}], color: {:02X}", self.cpu.pc - 2, color).as_str(),
-                );
+                self.log(format!("DRAW_COLOR [{:04X}], color: {:02X}", initial_pc, color).as_str());
                 self.draw_color(color);
                 2
             }
@@ -157,9 +188,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "DRAW_COLOR_REG [{:04X}], reg[{}]: {:02X}",
-                        self.cpu.pc - 2,
-                        x,
-                        reg_x
+                        initial_pc, x, reg_x
                     )
                     .as_str(),
                 );
@@ -172,9 +201,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "DRAW_SPRITE_REG [{:04X}], reg[{}]: {:02X}",
-                        self.cpu.pc - 2,
-                        reg_index,
-                        sprite_index
+                        initial_pc, reg_index, sprite_index
                     )
                     .as_str(),
                 );
@@ -186,8 +213,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "DRAW_SPRITE [{:04X}], sprite_index: {:02X}",
-                        self.cpu.pc - 2,
-                        sprite_index
+                        initial_pc, sprite_index
                     )
                     .as_str(),
                 );
@@ -198,7 +224,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "MOVE_TO [{:04X}], pos: {:03X}",
-                        self.cpu.pc - 2,
+                        initial_pc,
                         instruction & 0x0FFF
                     )
                     .as_str(),
@@ -212,9 +238,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "MOVE [{:04X}], subinstr: {:01X}, value: {:02X}",
-                        self.cpu.pc - 2,
-                        subinstr,
-                        value
+                        initial_pc, subinstr, value
                     )
                     .as_str(),
                 );
@@ -234,7 +258,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "SET_X [{:04X}], reg[{}]: {:02X}",
-                        self.cpu.pc - 2,
+                        initial_pc,
                         reg_index,
                         value % 64
                     )
@@ -250,7 +274,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "SET_Y [{:04X}], reg[{}]: {:02X}",
-                        self.cpu.pc - 2,
+                        initial_pc,
                         reg_index,
                         value % 64
                     )
@@ -261,9 +285,7 @@ impl Emulator {
             }
             0x5000..=0x5FFF => {
                 let address = instruction & 0x0FFF;
-                self.log(
-                    format!("JUMP [{:04X}], address: {:03X}", self.cpu.pc - 2, address).as_str(),
-                );
+                self.log(format!("JUMP [{:04X}], address: {:03X}", initial_pc, address).as_str());
                 self.cpu.pc = address;
                 2
             }
@@ -277,11 +299,11 @@ impl Emulator {
                 let ry = self.cpu.registers[y as usize];
 
                 if cond_function(rx, ry) {
-                    self.cpu.pc += 2;
+                    self.cpu.pc = self.cpu.pc.wrapping_add(2);
                     self.log(
                         format!(
                             "CONDITIONAL_JUMP [{:04X}], condition met, reg[{}]: {:02X}, reg[{}]: {:02X}",
-                            self.cpu.pc - 2,
+                            initial_pc,
                             x,
                             rx,
                             y,
@@ -294,7 +316,7 @@ impl Emulator {
                     self.log(
                         format!(
                             "CONDITIONAL_JUMP [{:04X}], condition not met, reg[{}]: {:02X}, reg[{}]: {:02X}",
-                            self.cpu.pc - 2,
+                            initial_pc,
                             x,
                             rx,
                             y,
@@ -311,9 +333,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "SET_REGISTER [{:04X}], reg[{}]: {:02X}",
-                        self.cpu.pc - 2,
-                        reg_index,
-                        value
+                        initial_pc, reg_index, value
                     )
                     .as_str(),
                 );
@@ -327,10 +347,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "COPY_REGISTER [{:04X}], reg[{}]: {:02X} -> reg[{}]",
-                        self.cpu.pc - 2,
-                        src_index,
-                        self.cpu.registers[src_index as usize],
-                        dst_index
+                        initial_pc, src_index, self.cpu.registers[src_index as usize], dst_index
                     )
                     .as_str(),
                 );
@@ -339,9 +356,7 @@ impl Emulator {
             }
             0x9000..=0x9FFF => {
                 let address = instruction & 0x0FFF;
-                self.log(
-                    format!("CALL [{:04X}], address: {:03X}", self.cpu.pc - 2, address).as_str(),
-                );
+                self.log(format!("CALL [{:04X}], address: {:03X}", initial_pc, address).as_str());
                 self.memory.push_to_stack_u16(&mut self.cpu.sp, self.cpu.pc);
                 self.cpu.pc = address;
                 4
@@ -351,8 +366,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "RETURN [{:04X}], returning to address: {:03X}",
-                        self.cpu.pc - 2,
-                        ret_address
+                        initial_pc, ret_address
                     )
                     .as_str(),
                 );
@@ -362,11 +376,11 @@ impl Emulator {
             0xB000..=0xB00F => {
                 let keycode = (instruction & 0x000F) as u8;
                 if self.input.is_pressed(keycode) {
-                    self.cpu.pc += 2;
+                    self.cpu.pc = self.cpu.pc.wrapping_add(2);
                     self.log(
                         format!(
                             "WAIT_FOR_KEY [{:04X}], keycode: {:02X} is pressed, skipping next instruction",
-                            self.cpu.pc - 2,
+                            initial_pc,
                             keycode
                         )
                         .as_str(),
@@ -376,8 +390,7 @@ impl Emulator {
                     self.log(
                         format!(
                             "WAIT_FOR_KEY [{:04X}], keycode: {:02X} is not pressed, waiting",
-                            self.cpu.pc - 2,
-                            keycode
+                            initial_pc, keycode
                         )
                         .as_str(),
                     );
@@ -397,12 +410,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "ARITHMETIC [{:04X}], reg[{}]: {:02X}, reg[{}]: {:02X}, result: {:02X}",
-                        self.cpu.pc - 2,
-                        x,
-                        rx,
-                        y,
-                        ry,
-                        result
+                        initial_pc, x, rx, y, ry, result
                     )
                     .as_str(),
                 );
@@ -415,9 +423,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "RANDOM [{:04X}], random number: {:02X} stored in reg[{}]",
-                        self.cpu.pc - 2,
-                        random_num,
-                        reg_index
+                        initial_pc, random_num, reg_index
                     )
                     .as_str(),
                 );
@@ -429,8 +435,7 @@ impl Emulator {
                 self.log(
                     format!(
                         "SET_INDEX [{:04X}], index set to address: {:03X}",
-                        self.cpu.pc - 2,
-                        address
+                        initial_pc, address
                     )
                     .as_str(),
                 );
@@ -439,7 +444,7 @@ impl Emulator {
             }
             0xFFFF => {
                 self.running = false;
-                self.log(format!("HALT [{:04X}]", self.cpu.pc - 2).as_str());
+                self.log(format!("HALT [{:04X}]", initial_pc).as_str());
                 1
             }
             _ => todo!("Instruction {:04X} not implemented", instruction),
@@ -490,6 +495,7 @@ impl Emulator {
                         )?;
 
                         print!("┌{}┐", ("─".repeat(64)));
+                        execute!(stdout, crossterm::cursor::MoveToNextLine(1))?;
                         for y in 0..64 {
                             if y % 2 == 1 {
                                 continue;
@@ -523,16 +529,21 @@ impl Emulator {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        restore_terminal();
+        default_hook(info);
+    }));
+
     let mut emulator = Emulator::new();
     emulator.start();
     emulator.memory.load_rom(&[
         0x00, 0x30, 0x00, 0x10, 0x00, 0x70, 0x05, 0x7F, 0x01, 0x7E, 0x00, 0xE0, 0x00, 0x2E, 0x08,
         0x40, 0x0E, 0xC0, 0x0F, 0x60, 0x0C, 0x59, 0x00, 0x00, 0x16, 0x59,
-    ]);
+    ])?;
 
-    terminal::enable_raw_mode()?;
+    let _guard = TerminalGuard::new()?;
     emulator.run()?;
-    terminal::disable_raw_mode()?;
 
     Ok(())
 }
