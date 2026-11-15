@@ -65,10 +65,8 @@ pub fn pump_events(emulator: &mut Emulator) -> std::io::Result<bool> {
                 if key.code == KeyCode::Esc || (ctrl && key.code == KeyCode::Char('c')) {
                     return Ok(false);
                 }
-                if !ctrl {
-                    if let Some(k) = decode_keycode(key.code) {
-                        emulator.key_down(k);
-                    }
+                if !ctrl && let Some(k) = decode_keycode(key.code) {
+                    emulator.key_down(k);
                 }
             }
             KeyEventKind::Release => {
@@ -99,7 +97,7 @@ fn render(
     buffer.push_str("┐\r\n");
 
     for y in (0..64).step_by(2) {
-        buffer.push_str("│");
+        buffer.push('│');
         let mut last: Option<(u8, u8)> = None;
         for x in 0..64 {
             let fg = vram[y * 64 + x];
@@ -129,7 +127,7 @@ fn render(
         buffer.push_str("\x1b[0m│\r\n");
     }
 
-    buffer.push_str("└");
+    buffer.push('└');
     buffer.push_str(&"─".repeat(64));
     buffer.push_str("┘\r\n");
 

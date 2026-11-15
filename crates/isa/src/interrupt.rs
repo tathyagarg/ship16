@@ -27,6 +27,7 @@ impl Interrupt {
     }
 }
 
+#[derive(Default)]
 pub struct InterruptController {
     enabled: u8,
     requested: u8,
@@ -36,16 +37,6 @@ pub struct InterruptController {
 }
 
 impl InterruptController {
-    pub fn new() -> Self {
-        InterruptController {
-            enabled: 0,
-            requested: 0,
-
-            master: false,
-            vectors: [None; 3],
-        }
-    }
-
     pub fn enable(&mut self, mask: u8) {
         self.enabled |= mask & Interrupt::MASK_ALL;
     }

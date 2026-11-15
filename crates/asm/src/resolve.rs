@@ -69,7 +69,7 @@ impl Program {
 fn move_start_to_beginning(program: &mut Program) {
     if let Some(start_index) = program.statements.iter().position(|stmt| {
         if let Statement::Label(label) = stmt {
-            label.to_ascii_uppercase() == "START"
+            label.eq_ignore_ascii_case("START")
         } else {
             false
         }

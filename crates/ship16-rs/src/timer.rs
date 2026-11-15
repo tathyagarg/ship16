@@ -44,7 +44,7 @@ impl Timer {
         }
 
         if ticks < self.counter {
-            self.counter -= ticks as u16;
+            self.counter -= ticks;
             return false;
         }
 
@@ -57,7 +57,7 @@ impl Timer {
                 return true;
             }
 
-            self.counter = (period - (remaining % period)) as u16;
+            self.counter = period - (remaining % period);
         } else {
             self.counter = 0;
             self.enabled = false;

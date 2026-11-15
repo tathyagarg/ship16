@@ -31,13 +31,11 @@ pub enum Token {
 }
 
 pub fn lex(input: &str) -> Box<[Token]> {
-    let mut lexer = Token::lexer(input);
+    let lexer = Token::lexer(input);
     let mut tokens = Vec::new();
 
-    while let Some(token) = lexer.next() {
-        if let Ok(token) = token {
-            tokens.push(token);
-        }
+    for token in lexer.flatten() {
+        tokens.push(token);
     }
 
     tokens.into_boxed_slice()

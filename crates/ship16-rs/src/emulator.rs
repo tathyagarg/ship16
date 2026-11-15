@@ -70,7 +70,7 @@ impl Emulator {
             input: input::Input::new(),
             logger,
             rng: Rng::new(),
-            interrupt_controller: InterruptController::new(),
+            interrupt_controller: InterruptController::default(),
             running: false,
 
             frame_ready: false,
@@ -271,18 +271,18 @@ impl Emulator {
             Instr::Clear => self.ppu.clear(self.memory.vram_mut()),
             Instr::DrawColor(color) => self.ppu.draw_pixel(self.memory.vram_mut(), color),
             Instr::DrawColorReg(r) => {
-                let color = self.cpu.registers[r as usize] as u8;
+                let color = self.cpu.registers[r] as u8;
                 self.ppu.draw_pixel(self.memory.vram_mut(), color);
             }
             Instr::DrawSprite(index) => self.draw_sprite(index),
-            Instr::DrawSpriteReg(r) => self.draw_sprite(self.cpu.registers[r as usize] as u8),
+            Instr::DrawSpriteReg(r) => self.draw_sprite(self.cpu.registers[r] as u8),
             Instr::MoveTo(packed) => self.ppu.set_cursor_packed(packed),
             Instr::AddX(v) => self.ppu.move_x(v as i16),
             Instr::SubX(v) => self.ppu.move_x(-(v as i16)),
             Instr::AddY(v) => self.ppu.move_y(v as i16),
             Instr::SubY(v) => self.ppu.move_y(-(v as i16)),
-            Instr::SetXReg(r) => self.ppu.set_x(self.cpu.registers[r as usize]),
-            Instr::SetYReg(r) => self.ppu.set_y(self.cpu.registers[r as usize]),
+            Instr::SetXReg(r) => self.ppu.set_x(self.cpu.registers[r]),
+            Instr::SetYReg(r) => self.ppu.set_y(self.cpu.registers[r]),
 
             Instr::Jump(address) | Instr::JumpLong(address) => self.cpu.pc = address,
             Instr::Call(address) | Instr::CallLong(address) => {
@@ -314,16 +314,16 @@ impl Emulator {
             }
             Instr::SkipIfKey(key) => skip = self.input.is_pressed(key),
 
-            Instr::SetReg { reg, value } => self.cpu.registers[reg as usize] = value as u16,
+            Instr::SetReg { reg, value } => self.cpu.registers[reg] = value as u16,
             Instr::SetRegLong { reg, value } => {
-                self.cpu.registers[reg as usize] = value;
+                self.cpu.registers[reg] = value;
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
             Instr::Copy {
                 reg_x: dst,
                 reg_y: src,
             } => {
-                self.cpu.registers[dst as usize] = self.cpu.registers[src as usize];
+                self.cpu.registers[dst] = self.cpu.registers[src];
             }
             Instr::Alu { op, reg_x, reg_y } => {
                 let out = op.eval(self.cpu.registers[reg_x], self.cpu.registers[reg_y]);
@@ -336,7 +336,7 @@ impl Emulator {
                 self.cpu.flags.set_from_alu(&out);
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
-            Instr::Random(r) => self.cpu.registers[r as usize] = self.rng.next_u16() as u16,
+            Instr::Random(r) => self.cpu.registers[r] = self.rng.next_u16(),
             Instr::SetIndex(address) => self.cpu.index = address,
             Instr::SetIndexLong(address) => {
                 self.cpu.index = address;

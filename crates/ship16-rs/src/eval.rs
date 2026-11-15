@@ -63,11 +63,11 @@ impl Evaluate for AluOp {
             },
             AluOp::Rol => {
                 let r = a.rotate_left(b as u32);
-                out(r, b % 16 != 0 && r & 1 != 0, false)
+                out(r, !b.is_multiple_of(16) && r & 1 != 0, false)
             }
             AluOp::Ror => {
                 let r = a.rotate_right(b as u32);
-                out(r, b % 16 != 0 && r & 0x8000 != 0, false)
+                out(r, !b.is_multiple_of(16) && r & 0x8000 != 0, false)
             }
         }
     }

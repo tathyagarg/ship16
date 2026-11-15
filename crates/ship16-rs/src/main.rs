@@ -65,7 +65,7 @@ fn frame_loop(emu: &mut Emulator) -> Result<(), Box<dyn std::error::Error>> {
             emu.vram(),
             &mut frame,
             truecolor,
-            &emu,
+            emu,
         )?;
 
         next += FRAME_DURATION;
