@@ -43,12 +43,12 @@ impl Ppu {
 
     pub fn move_x(&mut self, delta: i16) {
         let new_x = self.x as i16 + delta;
-        self.x = (new_x % 64) as u8;
+        self.x = (new_x as u8) % 64;
     }
 
     pub fn move_y(&mut self, delta: i16) {
         let new_y = self.y as i16 + delta;
-        self.y = (new_y % 64) as u8;
+        self.y = (new_y as u8) % 64;
     }
 
     pub fn set_x(&mut self, x: u16) {

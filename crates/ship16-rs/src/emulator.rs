@@ -301,8 +301,8 @@ impl Emulator {
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
             Instr::Copy {
-                reg_x: src,
-                reg_y: dst,
+                reg_x: dst,
+                reg_y: src,
             } => {
                 self.cpu.registers[dst as usize] = self.cpu.registers[src as usize];
             }

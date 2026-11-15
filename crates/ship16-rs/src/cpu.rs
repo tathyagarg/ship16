@@ -61,7 +61,7 @@ impl Cpu {
             registers: [0; REGISTER_COUNT],
             pc: ENTRY_POINT,
             sp: 0xFFFF,
-            index: 0x0200,
+            index: 0x0000,
             waiting: false,
             flags: Flags::new(),
         }

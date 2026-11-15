@@ -234,7 +234,7 @@ impl Instr {
             Self::Nop | Self::Copy { .. } | Self::Halt => 1,
             Self::Clear => CLEAR_CYCLES,
             Self::DrawSprite(_) | Self::DrawSpriteReg(_) => SPRITE_CYCLES,
-            Self::Call(_) | Self::Return => 4,
+            Self::Call(_) | Self::CallLong(_) | Self::Return => 4,
             Self::SkipIf { .. } | Self::SkipIfKey(_) => 2,
             Self::Alu { op, .. } => op.cycles(),
             _ => 2,
@@ -384,7 +384,7 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
                 3 => Flag::Negative,
                 _ => return Err(bad),
             },
-            set: (raw & 0x0080) != 0,
+            set: (raw & 0x0010) != 0,
         },
 
         0x01000 => Instr::Clear,
