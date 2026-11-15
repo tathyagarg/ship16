@@ -1,0 +1,11 @@
+program = ( "\n", statement, "\n" ) * ;
+
+statement = label | instruction ;
+
+label = IDENT ":" ;
+
+instruction = MNEMONIC [ operands ] ;
+
+operands = operand { "," operand } ;
+
+operand = REGISTER | INTEGER | IDENT ;
