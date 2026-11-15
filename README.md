@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/assets/preview.png" alt="SHIP-16 Preview" width="600"/>
+  <img src=".github/assets/preview.png" alt="SHIP-16 Preview" width="300"/>
 </div>
 
 # SHIP-16
@@ -12,7 +12,7 @@ A custom 16-bit virtual computer, emulator, and assembler written in Rust.
 
 SHIP-16 is an experimental virtual computer built from the ground up, featuring its own instruction set, memory model, graphics system, and assembly language.
 
-For the complete technical specification, see **[the specification](./Ship 16 Design Specification.pdf)**.
+For the complete technical specification, see **[the specification](./spec.pdf)**.
 
 ## Getting Started
 
