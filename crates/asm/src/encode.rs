@@ -5,7 +5,7 @@ use crate::{ast::Instruction, resolve::ResolvedProgram};
 fn encode_instruction(instr: &Instruction, label_map: &HashMap<String, u16>) -> Box<[u8]> {
     let isa_instr = instr
         .to_isa(label_map)
-        .expect("Failed to convert instruction to ISA");
+        .expect(&format!("Failed to encode instruction: {:?}", instr));
 
     let (w1, w2) = isa_instr.encode();
     let result = if let Some(w2) = w2 {

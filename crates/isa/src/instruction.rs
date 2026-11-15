@@ -150,6 +150,7 @@ pub enum Instr {
     Store16(RegisterIndex),
     AddIndex(RegisterIndex),
     Push(RegisterIndex),
+    PushLong(u16),
     Pop(RegisterIndex),
     SkipIfFlag {
         flag: Flag,
@@ -251,6 +252,7 @@ impl Instr {
             Self::Store16(reg) => (0x0230 | (*reg as u16), None),
             Self::AddIndex(reg) => (0x0240 | (*reg as u16), None),
             Self::Push(reg) => (0x0300 | (*reg as u16), None),
+            Self::PushLong(value) => (0x0320, Some(*value)),
             Self::Pop(reg) => (0x0310 | (*reg as u16), None),
 
             Self::SkipIfFlag { flag, set } => {
@@ -376,6 +378,7 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
         0x0240..=0x024F => Instr::AddIndex(nib(0)),
         0x0300..=0x030F => Instr::Push(nib(0)),
         0x0310..=0x031F => Instr::Pop(nib(0)),
+        0x0320 => Instr::PushLong(extra),
         0x0400..=0x041F => Instr::SkipIfFlag {
             flag: match nib(0) {
                 0 => Flag::Zero,
@@ -475,7 +478,7 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
 pub fn requires_extra(opcode: u16) -> bool {
     matches!(
         opcode,
-        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF
+        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF | 0x0320
     )
 }
 
@@ -488,6 +491,7 @@ pub fn instr_requires_extra(instr: &Instr) -> bool {
             | Instr::SetRegLong { .. }
             | Instr::AluImm { .. }
             | Instr::SkipIfImm { .. }
+            | Instr::PushLong(_)
     )
 }
 

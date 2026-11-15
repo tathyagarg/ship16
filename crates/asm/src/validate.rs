@@ -73,7 +73,7 @@ fn is_valid_instruction(instr: &Instruction) -> Result<(), String> {
         "LD16" => [[Register]],
         "ST16" => [[Register]],
         "AI" => [[Register]],
-        "PUSH" => [[Register]],
+        "PUSH" => [[Register | Immediate]],
         "POP" => [[Register]],
         "FSKP" => [[Label]],
         "FNSKP" => [[Label]],

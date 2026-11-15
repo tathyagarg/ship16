@@ -39,6 +39,8 @@ impl Program {
                             && !check_operands!(instr, [[Register], [Immediate]])
                         {
                             size = 1;
+                        } else if instr.opcode == "PUSH" && check_operands!(instr, [[Immediate]]) {
+                            size = 2;
                         }
 
                         current_address += 2 * size;

@@ -12,10 +12,6 @@
   </p>
 </div>
 
-## Overview
-
-SHIP-16 is an experimental virtual computer built from the ground up, featuring its own instruction set, memory model, graphics system, and assembly language.
-
 For the complete technical specification, see **[the specification](./spec.pdf)**.
 
 ## Getting Started

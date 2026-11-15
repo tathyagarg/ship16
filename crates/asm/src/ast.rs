@@ -71,7 +71,15 @@ impl Instruction {
             "LD16" => isa::Instr::Load16(self.operands[0].expect_register()?),
             "ST16" => isa::Instr::Store16(self.operands[0].expect_register()?),
             "AI" => isa::Instr::AddIndex(self.operands[0].expect_register()?),
-            "PUSH" => isa::Instr::Push(self.operands[0].expect_register()?),
+            "PUSH" => {
+                if let Operand::Register(reg) = &self.operands[0] {
+                    isa::Instr::Push(*reg)
+                } else if let Operand::Immediate(imm) = &self.operands[0] {
+                    isa::Instr::PushLong(*imm)
+                } else {
+                    return Err("Invalid operand for PUSH instruction".to_string());
+                }
+            }
             "POP" => isa::Instr::Pop(self.operands[0].expect_register()?),
             "FSKP" | "FNSKP" => {
                 let flag = match self.operands[0].expect_label()?.as_str() {

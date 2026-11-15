@@ -186,7 +186,7 @@ impl Emulator {
 
         match instr {
             Instr::Nop => {}
-            Instr::Halt => self.running = false,
+            Instr::Halt => self.cpu.waiting = true,
             Instr::Wait => self.cpu.waiting = true,
 
             Instr::Load8(reg_x) => {
@@ -218,6 +218,13 @@ impl Emulator {
                     self.log(&format!("Stack overflow at {:04X}: {:?}", pc, e));
                     self.running = false;
                 }
+            }
+            Instr::PushLong(value) => {
+                if let Err(e) = self.cpu.push_u16(&mut self.memory, value) {
+                    self.log(&format!("Stack overflow at {:04X}: {:?}", pc, e));
+                    self.running = false;
+                }
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
             Instr::Pop(reg_x) => match self.cpu.pop_u16(&self.memory) {
                 Ok(value) => self.cpu.registers[reg_x] = value,
