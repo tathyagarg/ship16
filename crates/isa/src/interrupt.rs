@@ -21,6 +21,10 @@ impl Interrupt {
             _ => None,
         }
     }
+
+    pub fn encode(&self) -> u8 {
+        *self as u8
+    }
 }
 
 pub struct InterruptController {

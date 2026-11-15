@@ -1,8 +1,9 @@
 use clap::Parser;
 
-use crate::{lexer::lex_from_file, resolve::resolve, validate::validate_program};
+use crate::{encode::encode, lexer::lex_from_file, resolve::resolve, validate::validate_program};
 
 mod ast;
+mod encode;
 mod lexer;
 mod parser;
 mod resolve;
@@ -12,17 +13,22 @@ mod validate;
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long, value_name = "FILE")]
-    path: String,
+    input: String,
+
+    #[arg(short, long, value_name = "FILE", default_value_t = String::from("output.bin"))]
+    output: String,
 }
 
 fn main() {
     let args = Args::parse();
-    let tokens = lex_from_file(&args.path).expect("Failed to lex the file");
+    let tokens = lex_from_file(&args.input).expect("Failed to lex the file");
     let mut parser = parser::Parser::new(&tokens);
-    let mut program = parser.parse_program().expect("Failed to parse the program");
+    let program = parser.parse_program().expect("Failed to parse the program");
 
     validate_program(&program).expect("Program validation failed");
     let res = resolve(program).expect("Program resolution failed");
 
-    println!("{:#?}", res);
+    let bytes = encode(&res);
+
+    std::fs::write(&args.output, &bytes).expect("Failed to write output file");
 }

@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
             match curr.clone() {
                 Token::Identifier(reg) if reg.starts_with("r") => {
                     self.advance();
-                    let reg_num = u8::from_str_radix(&reg[1..], 16)
+                    let reg_num = usize::from_str_radix(&reg[1..], 16)
                         .map_err(|e| format!("Invalid register number: {} {}", e, reg))?;
                     if reg_num > 15 {
                         return Err("Register number out of range (0-15)".to_string());

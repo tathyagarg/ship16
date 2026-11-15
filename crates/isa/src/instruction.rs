@@ -35,6 +35,17 @@ impl Cond {
             _ => None,
         }
     }
+
+    pub fn encode(&self) -> u8 {
+        match self {
+            Cond::Eq => 0,
+            Cond::Ne => 1,
+            Cond::Lt => 2,
+            Cond::Gt => 3,
+            Cond::Le => 4,
+            Cond::Ge => 5,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,6 +83,43 @@ impl AluOp {
             12 => Some(AluOp::Ror),
             _ => None,
         }
+    }
+
+    pub fn encode(&self) -> u8 {
+        match self {
+            AluOp::Add => 0,
+            AluOp::Sub => 1,
+            AluOp::Mul => 2,
+            AluOp::Div => 3,
+            AluOp::Rem => 4,
+            AluOp::And => 5,
+            AluOp::Or => 6,
+            AluOp::Xor => 7,
+            AluOp::Not => 8,
+            AluOp::Shl => 9,
+            AluOp::Shr => 10,
+            AluOp::Rol => 11,
+            AluOp::Ror => 12,
+        }
+    }
+
+    pub fn decode(raw: &str) -> Result<Self, String> {
+        Ok(match raw.to_ascii_uppercase().as_str() {
+            "ADD" => AluOp::Add,
+            "SUB" => AluOp::Sub,
+            "MUL" => AluOp::Mul,
+            "DIV" => AluOp::Div,
+            "REM" => AluOp::Rem,
+            "AND" => AluOp::And,
+            "OR" => AluOp::Or,
+            "XOR" => AluOp::Xor,
+            "NOT" => AluOp::Not,
+            "SHL" => AluOp::Shl,
+            "SHR" => AluOp::Shr,
+            "ROL" => AluOp::Rol,
+            "ROR" => AluOp::Ror,
+            _ => return Err(format!("Invalid ALU operation: {}", raw)),
+        })
     }
 
     pub fn cycles(&self) -> u32 {
@@ -190,6 +238,216 @@ impl Instr {
             Self::SkipIf { .. } | Self::SkipIfKey(_) => 2,
             Self::Alu { op, .. } => op.cycles(),
             _ => 2,
+        }
+    }
+
+    pub fn encode(&self) -> (u16, Option<u16>) {
+        //         0x0000 => Instr::Nop,
+        // 0x0200..=0x020F => Instr::Load8(nib(0)),
+        // 0x0210..=0x021F => Instr::Store8(nib(0)),
+        // 0x0220..=0x022F => Instr::Load16(nib(0)),
+        // 0x0230..=0x023F => Instr::Store16(nib(0)),
+        // 0x0240..=0x024F => Instr::AddIndex(nib(0)),
+        // 0x0300..=0x030F => Instr::Push(nib(0)),
+        // 0x0310..=0x031F => Instr::Pop(nib(0)),
+        // 0x0400..=0x041F => Instr::SkipIfFlag {
+        //     flag: match nib(0) {
+        //         0 => Flag::Zero,
+        //         1 => Flag::Carry,
+        //         2 => Flag::Overflow,
+        //         3 => Flag::Negative,
+        //         _ => return Err(bad),
+        //     },
+        //     set: (raw & 0x0080) != 0,
+        // },
+
+        // 0x01000 => Instr::Clear,
+
+        // 0x1100..=0x110F => Instr::TimerCount(nib(0)),
+        // 0x1110..=0x111F => Instr::TimerReload(nib(0)),
+        // 0x1120..=0x112F => Instr::TimerRead(nib(0)),
+        // 0x1130..=0x1133 => Instr::TimerConfig {
+        //     enable: (raw & 0x0002) != 0,
+        //     periodic: (raw & 0x0001) != 0,
+        // },
+        // 0x1200..=0x120F => Instr::IntEnable(nib(0) as u8),
+        // 0x1210..=0x121F => Instr::IntDisable(nib(0) as u8),
+        // 0x1300..=0x130F => Instr::SetVector(Interrupt::from_index(nib(0) as u8).ok_or(bad)?),
+        // 0x1400 => Instr::Ei,
+        // 0x1401 => Instr::Di,
+
+        // 0x1500 => Instr::Wait,
+
+        // 0x2000..=0x20FF => Instr::DrawColor(imm8),
+        // 0x2100..=0x210F => Instr::DrawColorReg(nib(0)),
+        // 0x2200..=0x22FF => Instr::DrawSprite(imm8),
+        // 0x2300..=0x230F => Instr::DrawSpriteReg(nib(0)),
+
+        // 0x3000..=0x3FFF => Instr::MoveTo(addr),
+        // 0x4000..=0x43FF => match nib(8) {
+        //     0 => Instr::AddX(imm8),
+        //     1 => Instr::AddY(imm8),
+        //     2 => Instr::SubX(imm8),
+        //     3 => Instr::SubY(imm8),
+        //     _ => return Err(bad),
+        // },
+        // 0x4A00..=0x4A0F => Instr::SetXReg(nib(0)),
+        // 0x4B00..=0x4B0F => Instr::SetYReg(nib(0)),
+
+        // 0x5000..=0x5FFF => Instr::Jump(addr),
+        // 0x6000..=0x6FFF => Instr::SkipIf {
+        //     cond: Cond::from_u8(nib(8) as u8).ok_or(bad)?,
+        //     reg_x: nib(4),
+        //     reg_y: nib(0),
+        // },
+        // 0x7000..=0x7FFF => Instr::SetReg {
+        //     reg: nib(8),
+        //     value: imm8,
+        // },
+        // 0x8000..=0x80FF => Instr::Copy {
+        //     reg_x: nib(4),
+        //     reg_y: nib(0),
+        // },
+        // 0x9000..=0x9FFF => Instr::Call(addr),
+
+        // 0xA000 => Instr::Return,
+        // 0xA001 => Instr::Reti,
+
+        // 0xB000..=0xB00F => Instr::SkipIfKey(nib(0) as u8),
+        // 0xC000..=0xCFFF => Instr::Alu {
+        //     op: AluOp::from_u8(nib(8) as u8).ok_or(bad)?,
+        //     reg_x: nib(4),
+        //     reg_y: nib(0),
+        // },
+        // 0xD000..=0xD00F => Instr::Random(nib(0)),
+        // 0xE000..=0xEFFF => Instr::SetIndex(addr),
+
+        // 0xF000 => Instr::JumpLong(extra),
+        // 0xF100 => Instr::CallLong(extra),
+        // 0xF200 => Instr::SetIndexLong(extra),
+        // 0xF300..=0xF30F => Instr::SetRegLong {
+        //     reg: nib(0),
+        //     value: extra,
+        // },
+
+        // 0xF400..=0xF4FF => Instr::AluImm {
+        //     op: AluOp::from_u8(nib(4) as u8).ok_or(bad)?,
+        //     reg_x: nib(0),
+        //     imm: extra,
+        // },
+        // 0xF500..=0xF5FF => Instr::SkipIfImm {
+        //     cond: Cond::from_u8(nib(4) as u8).ok_or(bad)?,
+        //     reg_x: nib(0),
+        //     imm: extra,
+        // },
+
+        // 0xFFFF => Instr::Halt,
+
+        match self {
+            Self::Nop => (0x0000, None),
+
+            Self::Load8(reg) => (0x0200 | (*reg as u16), None),
+            Self::Store8(reg) => (0x0210 | (*reg as u16), None),
+            Self::Load16(reg) => (0x0220 | (*reg as u16), None),
+            Self::Store16(reg) => (0x0230 | (*reg as u16), None),
+            Self::AddIndex(reg) => (0x0240 | (*reg as u16), None),
+            Self::Push(reg) => (0x0300 | (*reg as u16), None),
+            Self::Pop(reg) => (0x0310 | (*reg as u16), None),
+
+            Self::SkipIfFlag { flag, set } => {
+                let flag_bits = match flag {
+                    Flag::Zero => 0,
+                    Flag::Carry => 1,
+                    Flag::Overflow => 2,
+                    Flag::Negative => 3,
+                };
+                let set_bit = if *set { 0x0010 } else { 0 };
+                (0x0400 | (flag_bits as u16) | set_bit, None)
+            }
+
+            Self::Clear => (0x01000, None),
+
+            Self::TimerCount(reg) => (0x1100 | (*reg as u16), None),
+            Self::TimerReload(reg) => (0x1110 | (*reg as u16), None),
+            Self::TimerRead(reg) => (0x1120 | (*reg as u16), None),
+            Self::TimerConfig { enable, periodic } => {
+                let enable_bit = if *enable { 0x0002 } else { 0 };
+                let periodic_bit = if *periodic { 0x0001 } else { 0 };
+                (0x1130 | enable_bit | periodic_bit, None)
+            }
+
+            Self::IntEnable(value) => (0x1200 | (*value as u16), None),
+            Self::IntDisable(value) => (0x1210 | (*value as u16), None),
+            Self::SetVector(interrupt) => (0x1300 | (interrupt.encode() as u16), None),
+            Self::Ei => (0x1400, None),
+            Self::Di => (0x1401, None),
+
+            Self::Wait => (0x1500, None),
+
+            Self::DrawColor(value) => (0x2000 | (*value as u16), None),
+            Self::DrawColorReg(reg) => (0x2100 | (*reg as u16), None),
+            Self::DrawSprite(value) => (0x2200 | (*value as u16), None),
+            Self::DrawSpriteReg(reg) => (0x2300 | (*reg as u16), None),
+
+            Self::MoveTo(addr) => (0x3000 | (*addr & 0x0FFF), None),
+            Self::AddX(value) => (0x4000 | (*value as u16), None),
+            Self::AddY(value) => (0x4100 | (*value as u16), None),
+            Self::SubX(value) => (0x4200 | (*value as u16), None),
+            Self::SubY(value) => (0x4300 | (*value as u16), None),
+            Self::SetXReg(reg) => (0x4A00 | (*reg as u16), None),
+            Self::SetYReg(reg) => (0x4B00 | (*reg as u16), None),
+
+            Self::Jump(addr) => (0x5000 | (*addr & 0x0FFF), None),
+            Self::SkipIf { cond, reg_x, reg_y } => {
+                let cond_bits = cond.encode();
+                (
+                    0x6000 | ((cond_bits as u16) << 8) | ((*reg_x as u16) << 4) | (*reg_y as u16),
+                    None,
+                )
+            }
+
+            Self::SetReg { reg, value } => (0x7000 | ((*reg as u16) << 8) | (*value as u16), None),
+            Self::Copy { reg_x, reg_y } => {
+                (0x8000 | ((*reg_x as u16) << 4) | (*reg_y as u16), None)
+            }
+
+            Self::Call(addr) => (0x9000 | (*addr & 0x0FFF), None),
+            Self::Return => (0xA000, None),
+            Self::Reti => (0xA001, None),
+
+            Self::SkipIfKey(value) => (0xB000 | (*value as u16), None),
+            Self::Alu { op, reg_x, reg_y } => {
+                let op_bits = op.encode();
+                (
+                    0xC000 | ((op_bits as u16) << 8) | ((*reg_x as u16) << 4) | (*reg_y as u16),
+                    None,
+                )
+            }
+
+            Self::Random(reg) => (0xD000 | (*reg as u16), None),
+            Self::SetIndex(addr) => (0xE000 | (*addr & 0x0FFF), None),
+
+            Self::JumpLong(addr) => (0xF000, Some(*addr)),
+            Self::CallLong(addr) => (0xF100, Some(*addr)),
+            Self::SetIndexLong(addr) => (0xF200, Some(*addr)),
+            Self::SetRegLong { reg, value } => (0xF300 | (*reg as u16), Some(*value)),
+            Self::AluImm { op, reg_x, imm } => {
+                let op_bits = op.encode();
+                (
+                    0xF400 | ((op_bits as u16) << 4) | (*reg_x as u16),
+                    Some(*imm),
+                )
+            }
+
+            Self::SkipIfImm { cond, reg_x, imm } => {
+                let cond_bits = cond.encode();
+                (
+                    0xF500 | ((cond_bits as u16) << 4) | (*reg_x as u16),
+                    Some(*imm),
+                )
+            }
+
+            Self::Halt => (0xFFFF, None),
         }
     }
 }

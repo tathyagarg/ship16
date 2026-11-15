@@ -20,7 +20,7 @@ impl Program {
         let mut current_section = None;
         let mut current_address = 0x900u16;
 
-        for (i, statement) in self.statements.iter().enumerate() {
+        for statement in self.statements {
             match statement {
                 Statement::Label(label) => {
                     if let Some(section) = current_section.take() {

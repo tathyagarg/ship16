@@ -109,11 +109,11 @@ impl Emulator {
         }
     }
 
-    pub fn push(&mut self, value: u16, pc: u16) -> bool {
+    pub fn push(&mut self, value: u16) -> bool {
         match self.cpu.push_u16(&mut self.memory, value) {
             Ok(_) => true,
             Err(e) => {
-                self.log(&format!("Stack overflow at {:04X}: {:?}", pc, e));
+                trace!(self, "Stack overflow at {:04X}: {:?}", self.cpu.pc, e);
                 self.running = false;
                 false
             }
@@ -263,8 +263,13 @@ impl Emulator {
 
             Instr::Jump(address) | Instr::JumpLong(address) => self.cpu.pc = address,
             Instr::Call(address) | Instr::CallLong(address) => {
-                let ret = self.cpu.pc;
-                if self.push(ret, pc) {
+                let ret = if requires_extra(word) {
+                    pc.wrapping_add(4)
+                } else {
+                    pc.wrapping_add(2)
+                };
+
+                if self.push(ret) {
                     self.cpu.pc = address;
                 }
             }
@@ -278,11 +283,15 @@ impl Emulator {
             }
             Instr::SkipIfImm { cond, reg_x, imm } => {
                 skip = cond.eval(self.cpu.registers[reg_x], imm);
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
             Instr::SkipIfKey(key) => skip = self.input.is_pressed(key),
 
             Instr::SetReg { reg, value } => self.cpu.registers[reg as usize] = value as u16,
-            Instr::SetRegLong { reg, value } => self.cpu.registers[reg as usize] = value,
+            Instr::SetRegLong { reg, value } => {
+                self.cpu.registers[reg as usize] = value;
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
+            }
             Instr::Copy {
                 reg_x: src,
                 reg_y: dst,
@@ -298,16 +307,24 @@ impl Emulator {
                 let out = op.eval(self.cpu.registers[reg_x], imm);
                 self.cpu.registers[reg_x] = out.result;
                 self.cpu.flags.set_from_alu(&out);
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
             Instr::Random(r) => self.cpu.registers[r as usize] = self.rng.next_u16() as u16,
-            Instr::SetIndex(address) | Instr::SetIndexLong(address) => self.cpu.index = address,
+            Instr::SetIndex(address) => self.cpu.index = address,
+            Instr::SetIndexLong(address) => {
+                self.cpu.index = address;
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
+            }
         }
 
         if skip {
-            let next = self.memory.read_u16(self.cpu.pc);
-            let word_count = if requires_extra(next) { 2 } else { 1 };
+            let next_pc = self.cpu.pc;
+            let next_word = self.memory.read_u16(next_pc);
 
-            self.cpu.pc = self.cpu.pc.wrapping_add(word_count * 2);
+            self.cpu.pc = self
+                .cpu
+                .pc
+                .wrapping_add(if requires_extra(next_word) { 4 } else { 2 });
         }
 
         instr.base_cycles() + skip as u32
@@ -350,7 +367,7 @@ impl Emulator {
         let (_, vector) = self.interrupt_controller.acknowledge()?;
         let ret = self.cpu.pc;
 
-        if !self.push(ret, self.cpu.pc) {
+        if !self.push(ret) {
             return None;
         }
         self.cpu.pc = vector;
