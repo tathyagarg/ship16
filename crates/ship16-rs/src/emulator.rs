@@ -4,12 +4,14 @@ use std::{
 };
 
 use crate::{
-    constants::INTERRUPT_ENTRY_CYCLES,
     cpu, input,
-    instructions::{Instr, decode},
-    interrupt::{self, Interrupt},
     memory::{self, RoomTooLarge},
     ppu, timer,
+};
+use isa::{
+    constants::*,
+    instruction::{Instr, decode},
+    interrupt::{Interrupt, InterruptController},
 };
 
 macro_rules! trace {
@@ -47,7 +49,7 @@ pub struct Emulator {
     logger: Option<BufWriter<File>>,
     rng: Rng,
 
-    interrupt_controller: interrupt::InterruptController,
+    interrupt_controller: InterruptController,
     running: bool,
 
     frame_ready: bool,
@@ -67,7 +69,7 @@ impl Emulator {
             input: input::Input::new(),
             logger,
             rng: Rng::new(),
-            interrupt_controller: interrupt::InterruptController::new(),
+            interrupt_controller: InterruptController::new(),
             running: false,
 
             frame_ready: false,

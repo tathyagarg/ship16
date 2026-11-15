@@ -1,4 +1,4 @@
-use crate::constants::*;
+use isa::constants::*;
 use std::fmt::Display;
 
 const FONT: [u8; 0x140] = [

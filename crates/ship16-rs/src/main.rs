@@ -2,14 +2,12 @@ use std::time::{Duration, Instant};
 
 use crossterm::execute;
 
-use crate::{constants::*, emulator::Emulator};
+use crate::emulator::Emulator;
+use isa::constants::*;
 
-pub(crate) mod constants;
 pub(crate) mod cpu;
 pub(crate) mod emulator;
 pub(crate) mod input;
-pub(crate) mod instructions;
-pub(crate) mod interrupt;
 pub(crate) mod memory;
 pub(crate) mod ppu;
 pub(crate) mod terminal;

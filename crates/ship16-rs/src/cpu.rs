@@ -1,7 +1,7 @@
-use crate::{
+use crate::memory::Memory;
+use isa::{
     constants::*,
-    instructions::{AluOut, Flag},
-    memory::Memory,
+    instruction::{AluOut, Flag},
 };
 
 pub const REGISTER_COUNT: usize = 16;

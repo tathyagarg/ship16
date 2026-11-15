@@ -14,7 +14,7 @@
 # categories = ["emulators", "assembly"]
 
 [workspace]
-members = ["crates/ship16-rs"]
+members = ["crates/isa","crates/ship16-rs"]
 resolver = "2"
 
 [workspace.package]

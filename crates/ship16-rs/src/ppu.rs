@@ -1,4 +1,4 @@
-use crate::constants::CYCLES_PER_FRAME;
+use isa::constants::CYCLES_PER_FRAME;
 
 pub struct Ppu {
     pub x: u8,

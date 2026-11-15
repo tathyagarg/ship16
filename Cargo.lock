@@ -92,6 +92,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "isa"
+version = "0.1.0"
+
+[[package]]
 name = "libc"
 version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -225,6 +229,7 @@ name = "ship16-rs"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "isa",
 ]
 
 [[package]]
