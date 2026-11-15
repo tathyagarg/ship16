@@ -19,6 +19,12 @@ START:
   MOV    r1, 13
   MOV    rF, 56
 
+  TCFG 1, 1
+  MOV  r4, 30
+  TC   r4
+  TR   r4
+  ENINT 2
+
 DRAW:
   POP    r2
   DRWSR  r2
@@ -27,6 +33,7 @@ DRAW:
   INCX   8
   ADD    r0, 1
   SUB    r1, 1
+  WAIT
   FSKP   Z
   JMP    DRAW
   JMP    END
@@ -37,4 +44,4 @@ NEXTLINE:
   RET
 
 END:
-  HLT
+  JMP END
