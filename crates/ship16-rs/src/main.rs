@@ -1,3 +1,4 @@
+use clap::Parser;
 use std::time::{Duration, Instant};
 
 use crate::emulator::Emulator;
@@ -12,9 +13,18 @@ pub(crate) mod ppu;
 pub(crate) mod terminal;
 pub(crate) mod timer;
 
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(short, long, value_name = "FILE")]
+    rom: String,
+}
+
 const FRAME_DURATION: Duration = Duration::from_micros(CYCLES_PER_FRAME);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+    let rom_data = std::fs::read(&args.rom)?;
+
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         terminal::restore_terminal();
@@ -23,13 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut emulator = Emulator::new();
     emulator.start();
-    emulator.load_rom(&[
-        0x00, 0x30, 0x00, 0x10, 0x00, 0xF3, 0x00, 0x00, 0x0F, 0xF3, 0x01, 0x00, 0x0E, 0xF3, 0x3F,
-        0x00, 0x0D, 0xF3, 0x40, 0x00, 0x00, 0xF2, 0x28, 0x09, 0x02, 0x13, 0x04, 0x12, 0x00, 0x14,
-        0x01, 0xD0, 0x00, 0xF1, 0x34, 0x09, 0x00, 0xF0, 0x1E, 0x09, 0x01, 0xF3, 0x03, 0x00, 0x00,
-        0xF1, 0x34, 0x09, 0x00, 0xF0, 0x2C, 0x09, 0x01, 0x21, 0x0E, 0x61, 0x01, 0x41, 0x01, 0x40,
-        0x0F, 0xC0, 0x0D, 0xC4, 0x00, 0xA0,
-    ])?;
+    emulator.load_rom(&rom_data)?;
 
     {
         let _guard = terminal::TerminalGuard::new()?;
