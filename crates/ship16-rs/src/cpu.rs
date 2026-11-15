@@ -59,7 +59,7 @@ impl Cpu {
     pub fn new() -> Self {
         Cpu {
             registers: [0; REGISTER_COUNT],
-            pc: 0x0900,
+            pc: ENTRY_POINT,
             sp: 0xFFFF,
             index: 0x0200,
             waiting: false,

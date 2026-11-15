@@ -1,4 +1,4 @@
-pub const ENTRY_POINT: u16 = 0x0900;
+pub const ENTRY_POINT: u16 = 0x1000;
 pub const ROM_SIZE: usize = 0xC000; // 48KB
 pub const RAM_BASE: usize = 0xC000;
 pub const RAM_SIZE: usize = 0x4000; // 16KB

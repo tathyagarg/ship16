@@ -210,7 +210,13 @@ impl Instruction {
 
             "RAND" => isa::Instr::Random(self.operands[0].expect_register()?),
             "SETI" => {
-                isa::Instr::SetIndexLong(*label_map.get(&self.operands[0].expect_label()?).unwrap())
+                if let Operand::Immediate(imm) = &self.operands[0] {
+                    isa::Instr::SetIndexLong(*imm)
+                } else {
+                    isa::Instr::SetIndexLong(
+                        *label_map.get(&self.operands[0].expect_label()?).unwrap(),
+                    )
+                }
             }
 
             "HLT" => isa::Instr::Halt,

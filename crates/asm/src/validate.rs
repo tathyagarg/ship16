@@ -120,7 +120,7 @@ fn is_valid_instruction(instr: &Instruction) -> Result<(), String> {
         "ROL" => [[Register], [Immediate]],
         "ROR" => [[Register], [Immediate]],
         "RAND" => [[Register]],
-        "SETI" => [[Label]],
+        "SETI" => [[Label | Immediate]],
         "HLT" => [],
     });
 

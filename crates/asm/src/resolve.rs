@@ -1,4 +1,4 @@
-use isa::instruction::instr_size_from_name;
+use isa::{constants::ENTRY_POINT, instruction::instr_size_from_name};
 
 use crate::{ast::*, validate::check_operands};
 
@@ -18,7 +18,7 @@ impl Program {
     pub fn resolve(self) -> ResolvedProgram {
         let mut sections = Vec::new();
         let mut current_section = None;
-        let mut current_address = 0x900u16;
+        let mut current_address = ENTRY_POINT;
 
         for statement in self.statements {
             match statement {
@@ -36,7 +36,7 @@ impl Program {
                     if let Some(section) = current_section.as_mut() {
                         let mut size = instr_size_from_name(&instr.opcode);
                         if instr.opcode == "SKP"
-                            && check_operands!(instr, [[Register], [Immediate]])
+                            && !check_operands!(instr, [[Register], [Immediate]])
                         {
                             size = 1;
                         }

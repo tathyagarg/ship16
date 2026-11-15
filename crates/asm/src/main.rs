@@ -27,8 +27,16 @@ fn main() {
 
     validate_program(&program).expect("Program validation failed");
     let res = resolve(program).expect("Program resolution failed");
+    dbg!("Resolved program: {:?}", &res);
 
     let bytes = encode(&res);
+
+    for (i, byte) in bytes.iter().enumerate() {
+        if i % 2 == 0 {
+            print!("\n{:04X}: ", i);
+        }
+        print!("{:02X} ", byte);
+    }
 
     std::fs::write(&args.output, &bytes).expect("Failed to write output file");
 }

@@ -102,10 +102,11 @@ fn render(
                 if truecolor {
                     let [fr, fg, fb] = PALETTE[fg as usize];
                     let [br, bg, bb] = PALETTE[bg as usize];
-                    buffer.push_str(&format!(
+                    write!(
+                        buffer,
                         "\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m",
                         fr, fg, fb, br, bg, bb
-                    ));
+                    )?;
                 } else {
                     let _ = write!(
                         buffer,

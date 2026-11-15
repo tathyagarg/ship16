@@ -145,6 +145,14 @@ impl Emulator {
             let y = (self.ppu.y + (i as u8 / 8)) % 64;
             self.memory.draw_color(color, x, y);
         }
+
+        let mut debug_str = String::new();
+        for (i, color) in self.memory.vram().iter().enumerate() {
+            if i % 64 == 0 && i != 0 {
+                debug_str.push('\n');
+            }
+            debug_str.push(if *color == 0 { '.' } else { '#' });
+        }
     }
 
     pub fn key_down(&mut self, key: u8) {
