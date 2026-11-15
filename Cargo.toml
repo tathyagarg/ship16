@@ -26,6 +26,3 @@ repository = "https://github.com/tathyagarg/ship-16"
 
 [profile.dev]
 debug = 1
-
-[workspace.dependencies]
-crossterm = "0.29.0"
