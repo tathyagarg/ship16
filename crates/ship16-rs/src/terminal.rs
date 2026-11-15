@@ -88,8 +88,13 @@ fn render(
     truecolor: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     buffer.clear();
+    let title = " Ship-16 Emulator ";
+    let padding = (64 - title.len()) / 2;
+
     buffer.push_str("\x1b[H┌");
-    buffer.push_str(&"─".repeat(64));
+    buffer.push_str(&"─".repeat(padding));
+    buffer.push_str(title);
+    buffer.push_str(&"─".repeat(64 - padding - title.len()));
     buffer.push_str("┐\r\n");
 
     for y in (0..64).step_by(2) {
