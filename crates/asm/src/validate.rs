@@ -8,15 +8,16 @@ const VALID_OPCODES: [&str; 55] = [
     "ROL", "ROR", "RAND", "SETI", "HLT",
 ];
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum OperandType {
-    Register,
-    Immediate,
-    Label,
-}
-
 macro_rules! check_operands {
     ($instruction:expr, [$([$($expected:ident)|+]),* $(,)?]) => {{
+        #[derive(Debug, PartialEq, Eq)]
+        pub enum OperandType {
+            Register,
+            Immediate,
+            Label,
+        }
+
+
         let expected: Vec<Vec<OperandType>> = vec![
             $(
                 vec![$(OperandType::$expected),+]
@@ -39,6 +40,7 @@ macro_rules! check_operands {
                 .all(|(actual, allowed)| allowed.contains(actual))
     }};
 }
+pub(crate) use check_operands;
 
 macro_rules! validate_instruction {
     ($instruction:expr, {

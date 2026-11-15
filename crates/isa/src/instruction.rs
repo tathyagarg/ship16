@@ -314,3 +314,34 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
         _ => return Err(bad),
     })
 }
+
+pub fn requires_extra(opcode: u16) -> bool {
+    matches!(
+        opcode,
+        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF
+    )
+}
+
+pub fn instr_requires_extra(instr: &Instr) -> bool {
+    matches!(
+        instr,
+        Instr::JumpLong(_)
+            | Instr::CallLong(_)
+            | Instr::SetIndexLong(_)
+            | Instr::SetRegLong { .. }
+            | Instr::AluImm { .. }
+            | Instr::SkipIfImm { .. }
+    )
+}
+
+pub fn instr_size(instr: &Instr) -> u16 {
+    if instr_requires_extra(instr) { 2 } else { 1 }
+}
+
+pub fn instr_size_from_name(name: &str) -> u16 {
+    match name.to_ascii_uppercase().as_str() {
+        "JMP" | "CALL" | "SETI" | "MOV" | "ADD" | "SUB" | "MUL" | "DIV" | "REM" | "AND" | "OR"
+        | "XOR" | "SHL" | "SHR" | "ROL" | "ROR" | "SKP" => 2,
+        _ => 1,
+    }
+}

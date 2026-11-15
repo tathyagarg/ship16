@@ -12,7 +12,7 @@ use crate::{
 };
 use isa::{
     constants::*,
-    instruction::{Instr, decode},
+    instruction::{Instr, decode, requires_extra},
     interrupt::{Interrupt, InterruptController},
 };
 
@@ -305,10 +305,7 @@ impl Emulator {
 
         if skip {
             let next = self.memory.read_u16(self.cpu.pc);
-            let word_count = match next {
-                0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F => 2,
-                _ => 1,
-            };
+            let word_count = if requires_extra(next) { 2 } else { 1 };
 
             self.cpu.pc = self.cpu.pc.wrapping_add(word_count * 2);
         }
