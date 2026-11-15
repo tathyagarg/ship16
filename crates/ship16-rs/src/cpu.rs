@@ -17,7 +17,6 @@ pub struct Flags {
     pub carry: bool,
     pub overflow: bool,
     pub negative: bool,
-    pub collision: bool,
 }
 
 impl Flags {
@@ -27,7 +26,6 @@ impl Flags {
             carry: false,
             overflow: false,
             negative: false,
-            collision: false,
         }
     }
 
@@ -37,7 +35,6 @@ impl Flags {
             Flag::Carry => self.carry,
             Flag::Overflow => self.overflow,
             Flag::Negative => self.negative,
-            Flag::Collision => self.collision,
         }
     }
 

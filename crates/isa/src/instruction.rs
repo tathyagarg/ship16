@@ -11,7 +11,6 @@ pub enum Flag {
     Carry,
     Overflow,
     Negative,
-    Collision,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -147,6 +146,11 @@ pub enum Instr {
         reg_x: RegisterIndex,
         reg_y: RegisterIndex,
     },
+    SkipIfImm {
+        cond: Cond,
+        reg_x: RegisterIndex,
+        imm: u16,
+    },
     SkipIfKey(u8),
 
     SetReg {
@@ -165,6 +169,11 @@ pub enum Instr {
         op: AluOp,
         reg_x: RegisterIndex,
         reg_y: RegisterIndex,
+    },
+    AluImm {
+        op: AluOp,
+        reg_x: RegisterIndex,
+        imm: u16,
     },
     Random(RegisterIndex),
     SetIndex(u16),
@@ -216,7 +225,6 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
                 1 => Flag::Carry,
                 2 => Flag::Overflow,
                 3 => Flag::Negative,
-                4 => Flag::Collision,
                 _ => return Err(bad),
             },
             set: (raw & 0x0080) != 0,
@@ -289,6 +297,17 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
         0xF300..=0xF30F => Instr::SetRegLong {
             reg: nib(0),
             value: extra,
+        },
+
+        0xF400..=0xF4FF => Instr::AluImm {
+            op: AluOp::from_u8(nib(4) as u8).ok_or(bad)?,
+            reg_x: nib(0),
+            imm: extra,
+        },
+        0xF500..=0xF5FF => Instr::SkipIfImm {
+            cond: Cond::from_u8(nib(4) as u8).ok_or(bad)?,
+            reg_x: nib(0),
+            imm: extra,
         },
 
         0xFFFF => Instr::Halt,

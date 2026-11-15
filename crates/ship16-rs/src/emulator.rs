@@ -276,6 +276,9 @@ impl Emulator {
             Instr::SkipIf { cond, reg_x, reg_y } => {
                 skip = cond.eval(self.cpu.registers[reg_x], self.cpu.registers[reg_y]);
             }
+            Instr::SkipIfImm { cond, reg_x, imm } => {
+                skip = cond.eval(self.cpu.registers[reg_x], imm);
+            }
             Instr::SkipIfKey(key) => skip = self.input.is_pressed(key),
 
             Instr::SetReg { reg, value } => self.cpu.registers[reg as usize] = value as u16,
@@ -288,6 +291,11 @@ impl Emulator {
             }
             Instr::Alu { op, reg_x, reg_y } => {
                 let out = op.eval(self.cpu.registers[reg_x], self.cpu.registers[reg_y]);
+                self.cpu.registers[reg_x] = out.result;
+                self.cpu.flags.set_from_alu(&out);
+            }
+            Instr::AluImm { op, reg_x, imm } => {
+                let out = op.eval(self.cpu.registers[reg_x], imm);
                 self.cpu.registers[reg_x] = out.result;
                 self.cpu.flags.set_from_alu(&out);
             }
