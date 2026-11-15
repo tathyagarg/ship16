@@ -38,9 +38,15 @@ cargo run --bin ship16 -- --rom output.rom
 
 ### Expected Output
 
-When you run the example program, you should see rapidly changing random colors on the screen, that turn into a completely blue screen when you press any key (0-9, a-f). Example:
+When you run the example program, you should see rapidly changing random colors on the screen, that turn into a completely blue screen when you press any key (0-9, a-f).
 
-![Demo Output](.github/assets/demo.gif)
+## Demos
+
+| Demo | Preview |
+| :--- | :--- |
+| Hello World | <img src=".github/assets/hello_world.gif" width="300" alt="Hello World Demo"/> |
+| Bounce | <img src=".github/assets/bounce.gif" width="300" alt="Bounce Demo"/> |
+| BSOD | <img src=".github/assets/demo.gif" width="300" alt="BSOD Demo"/> |
 
 ## License
 
