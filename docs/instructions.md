@@ -8,14 +8,15 @@
 0x024X - AI r<0-F> - Move index register forward by value held in register rX
 0x030X - PUSH r<0-F> - Push value held in register rX onto the stack
 0x031X - POP r<0-F> - Pop value from the stack into register rX
-0x04nk - FSKP (\!?)[Z|C|O|N] - Skip next instruction if flag number k is set to n
+0x040k - FNSKP [Z|C|O|N] - Skip next instruction if flag number k is set to OFF
+0x041k - FSKP [Z|C|O|N] - Skip next instruction if flag number k is set to ON
 0x1000 - CLS - Clear the display
 0x110X - TC r<0-F> - Set timer counter to value held in register rX
 0x111X - TR r<0-F> - Set timer reload to value held in register rX
 0x112X - LDTC r<0-F> - Load timer counter into register rX
 0x113k - TCFG [0|1], [0|1] - Set timer configuration to k (bit 0: periodic, bit 1: enabled)
 0x120k - ENINT \d - Enable interrupt k
-0x121k - ENINT \d - Disable interrupt k
+0x121k - DISINT \d - Disable interrupt k
 0x130k - VEC \d - Set interrupt vector for interrupt k to value held in index register
 0x1400 - EI - Enable interrupts
 0x1401 - DI - Disable interrupts
@@ -39,7 +40,7 @@
 0x64XY - SKP.LE r<0-F>, r<0-F> - Skip next instruction if value in rX <= value in rY
 0x65XY - SKP.GE r<0-F>, r<0-F> - Skip next instruction if value in rX >= value in rY
 0x7XKK - MOV r<0-F>, \d - Move KK into register rX
-0x80XY - MOVR r<0-F>, r<0-F> - Copy value in register rX into register rY
+0x80XY - MOV r<0-F>, r<0-F> - Copy value in register rX into register rY
 0x9KKK - CALL \d - Call subroutine at address KKK
 0xA000 - RET - Return from subroutine
 0xA001 - RETI - Return from interrupt vector
