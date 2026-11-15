@@ -77,6 +77,14 @@ impl Emulator {
         }
     }
 
+    pub fn regs(&self) -> &[u16; 16] {
+        &self.cpu.registers
+    }
+
+    pub fn timer(&self) -> &timer::Timer {
+        &self.timer
+    }
+
     pub fn vram(&self) -> &[u8] {
         self.memory.vram()
     }
@@ -297,6 +305,10 @@ impl Emulator {
                 skip = cond.eval(self.cpu.registers[reg_x], self.cpu.registers[reg_y]);
             }
             Instr::SkipIfImm { cond, reg_x, imm } => {
+                trace!(
+                    self,
+                    "Evaluating skip condition: {:?} {} {}", cond, self.cpu.registers[reg_x], imm
+                );
                 skip = cond.eval(self.cpu.registers[reg_x], imm);
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
@@ -364,8 +376,13 @@ impl Emulator {
 
     pub fn step_cpu(&mut self) -> u32 {
         if self.cpu.waiting {
-            if self.interrupt_controller.has_pending() {
+            if self
+                .interrupt_controller
+                .has_pending_interrupt(Interrupt::Timer)
+            {
                 self.cpu.waiting = false;
+                self.interrupt_controller
+                    .acknowledge_interrupt(Interrupt::Timer);
             } else {
                 return 1;
             }

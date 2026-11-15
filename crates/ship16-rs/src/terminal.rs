@@ -86,6 +86,7 @@ fn render(
     vram: &[u8],
     buffer: &mut String,
     truecolor: bool,
+    emu: &Emulator,
 ) -> Result<(), Box<dyn std::error::Error>> {
     buffer.clear();
     let title = " Ship-16 Emulator ";
@@ -132,6 +133,32 @@ fn render(
     buffer.push_str(&"─".repeat(64));
     buffer.push_str("┘\r\n");
 
+    buffer.push_str("Registers:\r\n");
+    for (i, reg) in emu.regs().iter().enumerate() {
+        write!(buffer, "R{:01X}: {:04X}  ", i, reg)?;
+        if i % 4 == 3 {
+            buffer.push('\r');
+            buffer.push('\n');
+        }
+    }
+
+    buffer.push_str("\r\nTimer:\r\n");
+
+    write!(
+        buffer,
+        "Counter: {:04X}  Reload: {:04X}  PSA: {:08X}\r\n",
+        emu.timer().counter,
+        emu.timer().reload_to,
+        emu.timer().prescaler_accumulator
+    )?;
+
+    write!(
+        buffer,
+        "Enabled: {}  Periodic: {}\r\n",
+        emu.timer().enabled,
+        emu.timer().periodic
+    )?;
+
     Ok(())
 }
 
@@ -163,8 +190,9 @@ pub fn draw(
     vram: &[u8],
     buffer: &mut String,
     truecolor: bool,
+    emu: &Emulator,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    render(vram, buffer, truecolor)?;
+    render(vram, buffer, truecolor, emu)?;
     out.write_all(buffer.as_bytes())?;
     out.flush()?;
     Ok(())

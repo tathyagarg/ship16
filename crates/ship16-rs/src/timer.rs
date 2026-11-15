@@ -9,7 +9,7 @@ pub struct Timer {
 }
 
 impl Timer {
-    const PRESCALER: u16 = 1024;
+    const PRESCALER: u16 = 16667;
 
     pub fn new() -> Self {
         Timer {
@@ -36,20 +36,33 @@ impl Timer {
 
         self.prescaler_accumulator += n;
 
-        if self.prescaler_accumulator >= Self::PRESCALER {
-            let ticks = self.prescaler_accumulator / Self::PRESCALER;
-            self.prescaler_accumulator %= Self::PRESCALER;
+        let ticks = self.prescaler_accumulator / Self::PRESCALER;
+        self.prescaler_accumulator %= Self::PRESCALER;
 
-            if self.counter > ticks {
-                self.counter -= ticks;
-            } else {
-                if self.periodic {
-                    self.counter = self.reload_to;
-                }
-                return true; // Timer has expired
-            }
+        if ticks == 0 {
+            return false;
         }
 
-        false
+        if ticks < self.counter {
+            self.counter -= ticks as u16;
+            return false;
+        }
+
+        if self.periodic {
+            let remaining = ticks - self.counter;
+            let period = self.reload_to;
+
+            if period == 0 {
+                self.counter = 0;
+                return true;
+            }
+
+            self.counter = (period - (remaining % period)) as u16;
+        } else {
+            self.counter = 0;
+            self.enabled = false;
+        }
+
+        true
     }
 }

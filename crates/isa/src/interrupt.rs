@@ -70,6 +70,14 @@ impl InterruptController {
         (self.requested & self.enabled) != 0
     }
 
+    pub fn has_pending_interrupt(&self, interrupt: Interrupt) -> bool {
+        (self.requested & self.enabled & interrupt.bit()) != 0
+    }
+
+    pub fn acknowledge_interrupt(&mut self, interrupt: Interrupt) {
+        self.requested &= !interrupt.bit();
+    }
+
     pub fn acknowledge(&mut self) -> Option<(Interrupt, u16)> {
         if !self.master {
             return None;

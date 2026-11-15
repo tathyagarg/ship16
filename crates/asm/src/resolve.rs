@@ -14,6 +14,10 @@ pub struct Section {
     pub instructions: Vec<Instruction>,
 }
 
+pub const ALU_OPS: [&str; 13] = [
+    "ADD", "SUB", "MUL", "DIV", "MOD", "AND", "OR", "XOR", "NOT", "SHL", "SHR", "ROL", "ROR",
+];
+
 impl Program {
     pub fn resolve(self) -> ResolvedProgram {
         let mut sections = Vec::new();
@@ -41,6 +45,10 @@ impl Program {
                             size = 1;
                         } else if instr.opcode == "PUSH" && check_operands!(instr, [[Immediate]]) {
                             size = 2;
+                        } else if ALU_OPS.contains(&instr.opcode.as_str())
+                            && check_operands!(instr, [[Register], [Register]])
+                        {
+                            size = 1;
                         }
 
                         current_address += 2 * size;
