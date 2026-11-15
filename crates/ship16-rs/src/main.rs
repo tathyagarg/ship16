@@ -5,6 +5,7 @@ use isa::constants::*;
 
 pub(crate) mod cpu;
 pub(crate) mod emulator;
+pub(crate) mod eval;
 pub(crate) mod input;
 pub(crate) mod memory;
 pub(crate) mod ppu;

@@ -4,7 +4,9 @@ use std::{
 };
 
 use crate::{
-    cpu, input,
+    cpu,
+    eval::Evaluate,
+    input,
     memory::{self, RoomTooLarge},
     ppu, timer,
 };
@@ -29,14 +31,13 @@ impl Rng {
         Rng(0xDEADBEEF)
     }
 
-    fn next_u8(&mut self) -> u8 {
-        // Simple xorshift RNG
+    fn next_u16(&mut self) -> u16 {
         let mut x = self.0;
         x ^= x << 13;
         x ^= x >> 17;
         x ^= x << 5;
         self.0 = x;
-        (x & 0xFF) as u8
+        (x & 0xFFFF) as u16
     }
 }
 
@@ -290,7 +291,7 @@ impl Emulator {
                 self.cpu.registers[reg_x] = out.result;
                 self.cpu.flags.set_from_alu(&out);
             }
-            Instr::Random(r) => self.cpu.registers[r as usize] = self.rng.next_u8() as u16,
+            Instr::Random(r) => self.cpu.registers[r as usize] = self.rng.next_u16() as u16,
             Instr::SetIndex(address) | Instr::SetIndexLong(address) => self.cpu.index = address,
         }
 
@@ -351,56 +352,4 @@ impl Emulator {
 
         Some(INTERRUPT_ENTRY_CYCLES)
     }
-
-    // while self.running {
-    //     if event::poll(Duration::ZERO)? {
-    //         if let Event::Key(key_event) = event::read()? {
-    //             match key_event.kind {
-    //                 KeyEventKind::Press => {
-    //                     if key_event.code == KeyCode::Esc {
-    //                         self.running = false;
-    //                         continue;
-    //                     }
-
-    //                     if let Some(keycode) = decode_keycode(key_event.code) {
-    //                         self.input.key_down(keycode);
-    //                         self.interrupt_controller
-    //                             .request_interrupt(Interrupt::Input);
-    //                     }
-    //                 }
-    //                 KeyEventKind::Release => {
-    //                     if let Some(keycode) = decode_keycode(key_event.code) {
-    //                         self.input.key_up(keycode);
-    //                     }
-    //                 }
-    //                 KeyEventKind::Repeat => {}
-    //             }
-    //         }
-    //     }
-
-    //     let cycles = self.execute_instruction();
-
-    //     self.tick(cycles);
-
-    //     if self.interrupt_controller.is_any_interrupt_pending() {
-    //         while let Some(interrupt) = self.interrupt_controller.get_pending_interrupt() {
-    //             if interrupt == 0 {
-    //                 let vram = self.memory.vram();
-    //                 render(vram, &mut self.frame, self.truecolor)?;
-
-    //                 let mut stdout = std::io::stdout().lock();
-    //                 stdout.write_all(self.frame.as_bytes())?;
-    //                 stdout.flush()?;
-    //             } else if interrupt == 1 {
-    //                 // println!("TIMER interrupt triggered");
-    //             } else if interrupt == 2 {
-    //                 // println!("INPUT interrupt triggered");
-    //             }
-
-    //             self.interrupt_controller.clear_interrupt(1 << interrupt);
-    //         }
-    //     }
-    // }
-
-    // Ok(())
 }
