@@ -1,0 +1,20 @@
+[package]
+name = "ship16"
+version = "0.1.0"
+authors = ["Tathya Garg <me@arson.dev>"]
+edition = "2024"
+rust-version = "1.99"
+description = "An emulator for a custom 16-bit architecture called Ship-16"
+readme = "README.md"
+homepage = "https://github.com/tathyagarg/ship-16"
+repository = "https://github.com/tathyagarg/ship-16"
+license = "WTFPL"
+license-file = "LICENSE"
+keywords = ["emulator", "ship-16", "16-bit", "assembly", "custom-architecture"]
+categories = ["emulators", "assembly"]
+
+[workspace]
+members = ["crates/ship16-rs"]
+
+[dependencies]
+crossterm = "0.29.0"
