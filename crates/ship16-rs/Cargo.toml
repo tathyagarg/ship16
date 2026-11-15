@@ -1,0 +1,14 @@
+[package]
+name = "ship16-rs"
+version = "0.1.0"
+edition = "2024"
+homepage = "https://github.com/tathyagarg/ship-16"
+repository.workspace = true
+description = "An emulator for a custom 16-bit architecture called Ship-16"
+
+[[bin]]
+name = "ship16"
+path = "src/main.rs"
+
+[dependencies]
+crossterm = "0.29.0"

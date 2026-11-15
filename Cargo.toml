@@ -1,20 +1,31 @@
-[package]
-name = "ship16"
-version = "0.1.0"
-authors = ["Tathya Garg <me@arson.dev>"]
-edition = "2024"
-rust-version = "1.99"
-description = "An emulator for a custom 16-bit architecture called Ship-16"
-readme = "README.md"
-homepage = "https://github.com/tathyagarg/ship-16"
-repository = "https://github.com/tathyagarg/ship-16"
-license = "WTFPL"
-license-file = "LICENSE"
-keywords = ["emulator", "ship-16", "16-bit", "assembly", "custom-architecture"]
-categories = ["emulators", "assembly"]
+# [package]
+# name = "ship16"
+# version = "0.1.0"
+# authors = ["Tathya Garg <me@arson.dev>"]
+# edition = "2024"
+# rust-version = "1.99"
+# description = "An emulator for a custom 16-bit architecture called Ship-16"
+# readme = "README.md"
+# homepage = "https://github.com/tathyagarg/ship-16"
+# repository = "https://github.com/tathyagarg/ship-16"
+# license = "WTFPL"
+# license-file = "LICENSE"
+# keywords = ["emulator", "ship-16", "16-bit", "assembly", "custom-architecture"]
+# categories = ["emulators", "assembly"]
 
 [workspace]
 members = ["crates/ship16-rs"]
+resolver = "2"
 
-[dependencies]
+[workspace.package]
+rust-version = "1.99"
+edition = "2024"
+license = "WTFPL"
+authors = ["Tathya Garg <me@arson.dev>"]
+repository = "https://github.com/tathyagarg/ship-16"
+
+[profile.dev]
+debug = 1
+
+[workspace.dependencies]
 crossterm = "0.29.0"
