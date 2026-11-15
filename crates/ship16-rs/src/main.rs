@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use crossterm::execute;
-
 use crate::emulator::Emulator;
 use isa::constants::*;
 
@@ -15,42 +13,10 @@ pub(crate) mod timer;
 
 const FRAME_DURATION: Duration = Duration::from_micros(CYCLES_PER_FRAME);
 
-struct TerminalGuard;
-
-impl TerminalGuard {
-    fn new() -> std::io::Result<Self> {
-        crossterm::terminal::enable_raw_mode()?;
-        execute!(
-            std::io::stdout(),
-            crossterm::terminal::EnterAlternateScreen,
-            crossterm::cursor::Hide,
-            crossterm::event::PushKeyboardEnhancementFlags(
-                crossterm::event::KeyboardEnhancementFlags::REPORT_EVENT_TYPES
-            )
-        )?;
-        Ok(TerminalGuard)
-    }
-}
-
-impl Drop for TerminalGuard {
-    fn drop(&mut self) {
-        restore_terminal();
-    }
-}
-
-fn restore_terminal() {
-    let _ = execute!(
-        std::io::stdout(),
-        crossterm::terminal::LeaveAlternateScreen,
-        crossterm::cursor::Show,
-    );
-    let _ = crossterm::terminal::disable_raw_mode();
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        restore_terminal();
+        terminal::restore_terminal();
         default_hook(info);
     }));
 
@@ -67,10 +33,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     {
-        let _guard = TerminalGuard::new()?;
+        let _guard = terminal::TerminalGuard::new()?;
         frame_loop(&mut emulator)?;
         if !emulator.is_running() {
-            restore_terminal();
+            terminal::restore_terminal();
         }
     }
 

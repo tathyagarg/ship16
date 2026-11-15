@@ -1,8 +1,43 @@
 use std::{fmt::Write, time::Duration};
 
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
+    execute,
+};
 
 use crate::emulator::Emulator;
+
+pub struct TerminalGuard;
+
+impl TerminalGuard {
+    pub fn new() -> std::io::Result<Self> {
+        crossterm::terminal::enable_raw_mode()?;
+        execute!(
+            std::io::stdout(),
+            crossterm::terminal::EnterAlternateScreen,
+            crossterm::cursor::Hide,
+            crossterm::event::PushKeyboardEnhancementFlags(
+                crossterm::event::KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+            )
+        )?;
+        Ok(TerminalGuard)
+    }
+}
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        restore_terminal();
+    }
+}
+
+pub fn restore_terminal() {
+    let _ = execute!(
+        std::io::stdout(),
+        crossterm::terminal::LeaveAlternateScreen,
+        crossterm::cursor::Show,
+    );
+    let _ = crossterm::terminal::disable_raw_mode();
+}
 
 fn decode_keycode(keycode: KeyCode) -> Option<u8> {
     match keycode {
