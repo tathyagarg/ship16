@@ -24,5 +24,8 @@ license = "WTFPL"
 authors = ["Tathya Garg <me@arson.dev>"]
 repository = "https://github.com/tathyagarg/ship-16"
 
+[workspace.dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
 [profile.dev]
 debug = 1

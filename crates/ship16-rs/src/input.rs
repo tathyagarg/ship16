@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct Input(u16);
 
 impl Input {

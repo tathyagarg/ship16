@@ -66,3 +66,9 @@ impl Timer {
         true
     }
 }
+
+impl Default for Timer {
+    fn default() -> Self {
+        Self::new()
+    }
+}

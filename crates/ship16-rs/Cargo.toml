@@ -13,3 +13,10 @@ path = "src/main.rs"
 clap = { version = "4.6.7", features = ["derive"] }
 crossterm = "0.29.0"
 isa = { path = "../isa" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"], workspace = true }
+
+[[bench]]
+name = "cpu"
+harness = false

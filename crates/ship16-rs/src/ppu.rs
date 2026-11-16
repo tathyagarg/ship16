@@ -1,5 +1,6 @@
 use isa::constants::CYCLES_PER_FRAME;
 
+#[derive(Default)]
 pub struct Ppu {
     pub x: u8,
     pub y: u8,

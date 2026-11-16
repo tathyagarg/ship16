@@ -406,3 +406,9 @@ impl Emulator {
         Some(INTERRUPT_ENTRY_CYCLES)
     }
 }
+
+impl Default for Emulator {
+    fn default() -> Self {
+        Self::new()
+    }
+}

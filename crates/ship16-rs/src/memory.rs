@@ -432,3 +432,9 @@ impl Memory {
         &mut self.0[RAM_BASE..RAM_BASE + VRAM_SIZE]
     }
 }
+
+impl Default for Memory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
