@@ -2,12 +2,58 @@
 
 START:
   CLS
-  MOVC 0, 0
-  SETI 0xA000
-  DRWS 0
+  MOV r0, 28
+  MOV r1, 56
+  MOV r2, 2
 
-DONE:
-  JMP DONE
+  SETI MOVE
+  VEC  2
+  ENINT 0b100
+  EI
+
+  SETI _SS
+
+LOOP:
+  SETX r0
+  SETY r1
+  DRWS 0
+  JMP  LOOP
+
+MOVE:
+  CLS
+  KSKP 1
+  JMP  MOVE_UDR
+  JMP  MOVE_LEFT
+
+MOVE_UDR:
+  KSKP 2
+  JMP  MOVE_UD
+  JMP  MOVE_RIGHT
+
+MOVE_UD:
+  KSKP 9
+  JMP  MOVE_UP
+  JMP  MOVE_DOWN
+
+MOVE_RIGHT:
+  SKP<GE> r0, 56
+  ADD r0, r2
+  RETI
+
+MOVE_LEFT:
+  SKP<LE> r0, 0
+  SUB r0, r2
+  RETI
+
+MOVE_UP:
+  SKP<LE> r1, 0
+  SUB r1, r2
+  RETI
+
+MOVE_DOWN:
+  SKP<GE> r1, 56
+  ADD r1, r2
+  RETI
 
 .section sprites
 

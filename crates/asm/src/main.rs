@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use crate::{encode::encode, lexer::lex_from_file, resolve::resolve, validate::validate_program};
+use crate::{lexer::lex_from_file, resolve::resolve, validate::validate_program};
 
 mod ast;
 mod encode;
@@ -46,10 +46,10 @@ fn main() {
     let res = resolve(program).expect("Program resolution failed");
     dbg!("Resolved program: {:?}", &res);
 
-    let bytes = encode(res);
+    let bytes = res.encode();
 
     for (i, byte) in bytes.iter().enumerate() {
-        if i % 16 == 0 {
+        if i % 20 == 0 {
             print!("\n{:04X}: ", i);
         }
         print!("{:02X} ", byte);

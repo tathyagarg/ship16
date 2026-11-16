@@ -382,10 +382,6 @@ impl Memory {
         Memory(data)
     }
 
-    pub fn data(&self) -> &[u8] {
-        &self.0
-    }
-
     pub fn read_byte(&self, address: u16) -> u8 {
         self.0[address as usize]
     }

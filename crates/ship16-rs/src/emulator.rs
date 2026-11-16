@@ -153,13 +153,6 @@ impl Emulator {
         let sprite_data = self
             .memory
             .read_sprite((self.cpu.index + (64 * sprite_index as u16)) as usize);
-        // dump enture memory
-        for (i, byte) in self.memory.data().iter().enumerate() {
-            if i % 16 == 0 {
-                trace!(self, write; "\n{:04X}: ", i);
-            }
-            trace!(self, write; "{:02X} ", byte);
-        }
 
         for (i, &color) in sprite_data.iter().enumerate() {
             let x = (self.ppu.x + (i as u8 % 8)) % 64;

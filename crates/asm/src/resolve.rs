@@ -5,6 +5,7 @@ use crate::{ast::*, validate::check_operands};
 #[derive(Debug)]
 pub struct ResolvedProgram {
     pub sections: Vec<Section>,
+    pub sprite_start: usize,
     pub sprites: Vec<Sprite>,
 }
 
@@ -70,6 +71,7 @@ impl Program {
 
         ResolvedProgram {
             sections,
+            sprite_start: current_address as usize,
             sprites: self.sprite_section.sprites,
         }
     }

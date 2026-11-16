@@ -139,7 +139,7 @@ fn is_valid_instruction(instr: &Instruction) -> Result<(), String> {
     }
 
     if matches!(instr.opcode.as_str(), "FSKP" | "FNSKP")
-        && !matches!(instr.operands.first(), Some(Operand::Label(label)) if label == "Z" || label == "N" || label == "C" || label == "O")
+        && !matches!(instr.operands.first(), Some(Operand::Label(label)) if matches!(label.as_str(), "Z" | "N" | "C" | "O"))
     {
         return Err(format!(
             "FSKP and FNSKP instructions must have a flag operand of Z, N, C, or O, found: {:?}",
