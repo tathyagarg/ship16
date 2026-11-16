@@ -5,6 +5,7 @@ use crate::{ast::*, validate::check_operands};
 #[derive(Debug)]
 pub struct ResolvedProgram {
     pub sections: Vec<Section>,
+    pub sprites: Vec<Sprite>,
 }
 
 #[derive(Debug)]
@@ -24,7 +25,7 @@ impl Program {
         let mut current_section = None;
         let mut current_address = ENTRY_POINT;
 
-        for statement in self.statements {
+        for statement in self.text_section.statements {
             match statement {
                 Statement::Label(label) => {
                     if let Some(section) = current_section.take() {
@@ -67,23 +68,27 @@ impl Program {
             sections.push(section);
         }
 
-        ResolvedProgram { sections }
+        ResolvedProgram {
+            sections,
+            sprites: self.sprite_section.sprites,
+        }
     }
 }
 
 fn move_start_to_beginning(program: &mut Program) {
-    if let Some(start_index) = program.statements.iter().position(|stmt| {
+    if let Some(start_index) = program.text_section.statements.iter().position(|stmt| {
         if let Statement::Label(label) = stmt {
             label.eq_ignore_ascii_case("START")
         } else {
             false
         }
     }) {
-        let mut start_statements = program.statements.split_off(start_index);
-        start_statements.append(&mut program.statements);
-        program.statements = start_statements;
+        let mut start_statements = program.text_section.statements.split_off(start_index);
+        start_statements.append(&mut program.text_section.statements);
+        program.text_section.statements = start_statements;
     } else {
         program
+            .text_section
             .statements
             .insert(0, Statement::Label("START".to_string()));
     }

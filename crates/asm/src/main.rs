@@ -20,6 +20,9 @@ struct Args {
 
     #[arg(short, long, default_value_t = false)]
     lex: bool,
+
+    #[arg(short, long, default_value_t = false)]
+    parse: bool,
 }
 
 fn main() {
@@ -34,6 +37,10 @@ fn main() {
 
     let mut parser = parser::Parser::new(&tokens);
     let program = parser.parse_program().expect("Failed to parse the program");
+    if args.parse {
+        println!("{:#?}", program);
+        return;
+    }
 
     validate_program(&program).expect("Program validation failed");
     let res = resolve(program).expect("Program resolution failed");
@@ -42,7 +49,7 @@ fn main() {
     let bytes = encode(&res);
 
     for (i, byte) in bytes.iter().enumerate() {
-        if i % 2 == 0 {
+        if i % 16 == 0 {
             print!("\n{:04X}: ", i);
         }
         print!("{:02X} ", byte);

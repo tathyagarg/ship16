@@ -11,3 +11,6 @@ pub const STACK_LIMIT: usize = RAM_BASE + VRAM_SIZE;
 
 pub const CYCLES_PER_FRAME: u64 = 16667; // 60 FPS
 pub const INTERRUPT_ENTRY_CYCLES: u32 = 4;
+
+pub const ROM_CUSTOM_SPRITE_BASE: usize = 0xA000;
+pub const USER_ROM_SIZE: usize = ROM_SIZE - ENTRY_POINT as usize;

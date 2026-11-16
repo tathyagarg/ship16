@@ -4,7 +4,18 @@ use isa::{AluOp, Interrupt};
 
 #[derive(Debug)]
 pub struct Program {
+    pub text_section: TextSection,
+    pub sprite_section: SpriteSection,
+}
+
+#[derive(Debug)]
+pub struct TextSection {
     pub statements: Vec<Statement>,
+}
+
+#[derive(Debug)]
+pub struct SpriteSection {
+    pub sprites: Vec<Sprite>,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +36,12 @@ pub enum Operand {
     Register(usize),
     Immediate(u16),
     Label(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct Sprite {
+    pub index: usize,
+    pub data: [u8; 64],
 }
 
 impl Operand {

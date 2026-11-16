@@ -153,7 +153,7 @@ fn is_valid_instruction(instr: &Instruction) -> Result<(), String> {
 pub fn validate_program(program: &Program) -> Result<(), String> {
     let mut labels = std::collections::HashSet::new();
 
-    for statement in &program.statements {
+    for statement in &program.text_section.statements {
         match statement {
             Statement::Label(label) => {
                 if !labels.insert(label.clone()) {
