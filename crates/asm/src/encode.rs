@@ -24,7 +24,7 @@ fn encode_instruction(instr: &Instruction, label_map: &HashMap<String, u16>) -> 
     result.into_boxed_slice()
 }
 
-pub fn encode(program: &ResolvedProgram) -> [u8; USER_ROM_SIZE] {
+pub fn encode(mut program: ResolvedProgram) -> [u8; USER_ROM_SIZE] {
     let mut bytes = [0u8; USER_ROM_SIZE];
     let label_map: HashMap<String, u16> = program
         .sections
@@ -49,7 +49,23 @@ pub fn encode(program: &ResolvedProgram) -> [u8; USER_ROM_SIZE] {
     }
 
     curr_pos = ROM_CUSTOM_SPRITE_BASE - ENTRY_POINT as usize;
-    for sprite in &program.sprites {
+
+    program.sprites.sort_by_key(|sprite| sprite.index);
+    let mut last_index = 0;
+    for sprite in program.sprites.iter() {
+        if sprite.index > last_index {
+            let gap = sprite.index - last_index;
+            let gap_bytes = gap * 64;
+            for _ in 0..gap_bytes {
+                if curr_pos < USER_ROM_SIZE {
+                    bytes[curr_pos] = 0;
+                    curr_pos += 1;
+                } else {
+                    panic!("ROM size exceeded while encoding sprite gaps");
+                }
+            }
+        }
+
         let sprite_bytes = sprite.data;
         for byte in sprite_bytes.iter() {
             if curr_pos < USER_ROM_SIZE {
@@ -59,6 +75,8 @@ pub fn encode(program: &ResolvedProgram) -> [u8; USER_ROM_SIZE] {
                 panic!("ROM size exceeded while encoding sprites");
             }
         }
+
+        last_index = sprite.index + 1;
     }
 
     bytes

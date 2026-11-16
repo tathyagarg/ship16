@@ -46,7 +46,7 @@ fn main() {
     let res = resolve(program).expect("Program resolution failed");
     dbg!("Resolved program: {:?}", &res);
 
-    let bytes = encode(&res);
+    let bytes = encode(res);
 
     for (i, byte) in bytes.iter().enumerate() {
         if i % 16 == 0 {
@@ -55,5 +55,5 @@ fn main() {
         print!("{:02X} ", byte);
     }
 
-    std::fs::write(&args.output, &bytes).expect("Failed to write output file");
+    std::fs::write(&args.output, bytes).expect("Failed to write output file");
 }
