@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/assets/preview.png" alt="SHIP-16 Preview" width="300"/>
+  <img src=".github/assets/logo.svg" alt="SHIP-16 Logo" width="300"/>
   <h1>Ship-16</h1>
 
 <div>
