@@ -9,7 +9,7 @@ LOOP:
     XOR r0, r1
     ADD r1, r1
 
-    SKP.NE r1, r2
+    SKP<NE> r1, r2
     JMP RESET
 
     JMP LOOP

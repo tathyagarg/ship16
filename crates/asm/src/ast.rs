@@ -16,7 +16,7 @@ pub enum Statement {
 #[derive(Debug, Clone)]
 pub struct Instruction {
     pub opcode: String,
-    pub directive: Option<String>,
+    pub condition: Option<String>,
     pub operands: Vec<Operand>,
 }
 
@@ -150,7 +150,7 @@ impl Instruction {
 
             "SKP" => {
                 let cond = decode_directive_to_cond(
-                    self.directive
+                    self.condition
                         .as_ref()
                         .ok_or("Missing directive for SKP instruction")?,
                 )?;

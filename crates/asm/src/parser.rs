@@ -71,10 +71,10 @@ impl<'a> Parser<'a> {
             let opcode_name = opcode.clone();
             self.advance(); // Advance past the opcode
 
-            let directive = if let Some(Token::Directive(dir)) = self.current() {
-                let directive_name = dir.clone();
+            let condition = if let Some(Token::Condition(cond)) = self.current() {
+                let condition_name = cond.clone();
                 self.advance(); // Advance past the directive
-                Some(directive_name)
+                Some(condition_name)
             } else {
                 None
             };
@@ -97,7 +97,7 @@ impl<'a> Parser<'a> {
 
             Ok(Instruction {
                 opcode: opcode_name,
-                directive,
+                condition,
                 operands,
             })
         } else {

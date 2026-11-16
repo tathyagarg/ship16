@@ -28,7 +28,7 @@ START:
 DRAW:
   POP    r2
   DRWSR  r2
-  SKP.NE r0, 5
+  SKP<NE> r0, 5
   CALL   NEXTLINE
   INCX   8
   ADD    r0, 1

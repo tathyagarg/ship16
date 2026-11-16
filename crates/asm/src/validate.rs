@@ -131,7 +131,7 @@ fn is_valid_instruction(instr: &Instruction) -> Result<(), String> {
         ));
     }
 
-    if instr.directive.is_some() && instr.opcode != "SKP" {
+    if instr.condition.is_some() && instr.opcode != "SKP" {
         return Err(format!(
             "Directives are only allowed for SKP instruction, found in: {}",
             instr.opcode
