@@ -151,15 +151,10 @@ impl Emulator {
         for (i, &color) in sprite_data.iter().enumerate() {
             let x = (self.ppu.x + (i as u8 % 8)) % 64;
             let y = (self.ppu.y + (i as u8 / 8)) % 64;
-            self.memory.draw_color(color, x, y);
-        }
-
-        let mut debug_str = String::new();
-        for (i, color) in self.memory.vram().iter().enumerate() {
-            if i % 64 == 0 && i != 0 {
-                debug_str.push('\n');
+            if x > 7 {
+                trace!(self, "Sprite drawing out of bounds: x={x}, y={y}");
             }
-            debug_str.push(if *color == 0 { '.' } else { '#' });
+            self.memory.draw_color(color, x, y);
         }
     }
 
@@ -218,6 +213,10 @@ impl Emulator {
             Instr::AddIndex(reg_x) => {
                 let value = self.cpu.registers[reg_x];
                 self.cpu.index = self.cpu.index.wrapping_add(value);
+            }
+            Instr::AddIndexLong(value) => {
+                self.cpu.index = self.cpu.index.wrapping_add(value);
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
 
             Instr::Push(reg_x) => {

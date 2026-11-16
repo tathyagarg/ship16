@@ -149,6 +149,7 @@ pub enum Instr {
     Load16(RegisterIndex),
     Store16(RegisterIndex),
     AddIndex(RegisterIndex),
+    AddIndexLong(u16),
     Push(RegisterIndex),
     PushLong(u16),
     Pop(RegisterIndex),
@@ -251,6 +252,7 @@ impl Instr {
             Self::Load16(reg) => (0x0220 | (*reg as u16), None),
             Self::Store16(reg) => (0x0230 | (*reg as u16), None),
             Self::AddIndex(reg) => (0x0240 | (*reg as u16), None),
+            Self::AddIndexLong(value) => (0x0250, Some(*value)),
             Self::Push(reg) => (0x0300 | (*reg as u16), None),
             Self::PushLong(value) => (0x0320, Some(*value)),
             Self::Pop(reg) => (0x0310 | (*reg as u16), None),
@@ -376,6 +378,7 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
         0x0220..=0x022F => Instr::Load16(nib(0)),
         0x0230..=0x023F => Instr::Store16(nib(0)),
         0x0240..=0x024F => Instr::AddIndex(nib(0)),
+        0x0250 => Instr::AddIndexLong(extra),
         0x0300..=0x030F => Instr::Push(nib(0)),
         0x0310..=0x031F => Instr::Pop(nib(0)),
         0x0320 => Instr::PushLong(extra),
@@ -478,7 +481,7 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
 pub fn requires_extra(opcode: u16) -> bool {
     matches!(
         opcode,
-        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF | 0x0320
+        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF | 0x0320 | 0x0250
     )
 }
 
@@ -502,7 +505,7 @@ pub fn instr_size(instr: &Instr) -> u16 {
 pub fn instr_size_from_name(name: &str) -> u16 {
     match name.to_ascii_uppercase().as_str() {
         "JMP" | "CALL" | "SETI" | "MOV" | "ADD" | "SUB" | "MUL" | "DIV" | "REM" | "AND" | "OR"
-        | "XOR" | "SHL" | "SHR" | "ROL" | "ROR" | "SKP" => 2,
+        | "XOR" | "SHL" | "SHR" | "ROL" | "ROR" | "SKP" | "AI" => 2,
         _ => 1,
     }
 }

@@ -70,7 +70,15 @@ impl Instruction {
             "ST8" => isa::Instr::Store8(self.operands[0].expect_register()?),
             "LD16" => isa::Instr::Load16(self.operands[0].expect_register()?),
             "ST16" => isa::Instr::Store16(self.operands[0].expect_register()?),
-            "AI" => isa::Instr::AddIndex(self.operands[0].expect_register()?),
+            "AI" => {
+                if matches!(self.operands[0], Operand::Register(_)) {
+                    isa::Instr::AddIndex(self.operands[0].expect_register()?)
+                } else if matches!(self.operands[0], Operand::Immediate(_)) {
+                    isa::Instr::AddIndexLong(self.operands[0].expect_immediate()?)
+                } else {
+                    return Err("Invalid operand for AI instruction".to_string());
+                }
+            }
             "PUSH" => {
                 if let Operand::Register(reg) = &self.operands[0] {
                     isa::Instr::Push(*reg)

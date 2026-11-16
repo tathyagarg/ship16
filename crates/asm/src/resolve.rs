@@ -15,7 +15,7 @@ pub struct Section {
 }
 
 pub const ALU_OPS: [&str; 13] = [
-    "ADD", "SUB", "MUL", "DIV", "MOD", "AND", "OR", "XOR", "NOT", "SHL", "SHR", "ROL", "ROR",
+    "ADD", "SUB", "MUL", "DIV", "REM", "AND", "OR", "XOR", "NOT", "SHL", "SHR", "ROL", "ROR",
 ];
 
 impl Program {
@@ -45,11 +45,16 @@ impl Program {
                             size = 1;
                         } else if instr.opcode == "PUSH" && check_operands!(instr, [[Immediate]]) {
                             size = 2;
-                        } else if ALU_OPS.contains(&instr.opcode.as_str())
-                            && check_operands!(instr, [[Register], [Register]])
+                        } else if (ALU_OPS.contains(&instr.opcode.as_str())
+                            && check_operands!(instr, [[Register], [Register]]))
+                            || (instr.opcode == "MOV"
+                                && check_operands!(instr, [[Register], [Register]]))
+                            || (instr.opcode == "AI" && check_operands!(instr, [[Register]]))
                         {
                             size = 1;
                         }
+
+                        println!("Instruction: {}, Size: {}", instr.opcode, size);
 
                         current_address += 2 * size;
                         section.instructions.push(instr.clone());
