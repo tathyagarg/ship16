@@ -1,3 +1,5 @@
+.section text
+
 START:
   PUSH   37
   PUSH   6

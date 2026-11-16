@@ -64,7 +64,7 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new() -> Self {
-        let logger = std::env::var_os("SHIP8_LOG")
+        let logger = std::env::var_os("SHIP16_LOG")
             .and_then(|path| File::create(path).ok())
             .map(BufWriter::new);
 

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/assets/logo.svg" alt="SHIP-16 Logo" width="300"/>
+  <img src=".github/assets/logo.svg" alt="SHIP-16 Logo" width="600"/>
   <h1>Ship-16</h1>
 
 <div>
@@ -42,11 +42,12 @@ When you run the example program, you should see rapidly changing random colors 
 
 ## Demos
 
-| Demo | Preview |
-| :--- | :--- |
-| Hello World | <img src=".github/assets/hello_world.gif" width="300" alt="Hello World Demo"/> |
-| Bounce | <img src=".github/assets/bounce.gif" width="300" alt="Bounce Demo"/> |
-| BSOD | <img src=".github/assets/demo.gif" width="300" alt="BSOD Demo"/> |
+| Demo | Preview | Note |
+| :--- | :--- | :--- |
+| Hello World | <img src=".github/assets/hello_world.gif" width="300" alt="Hello World Demo"/> | |
+| Bounce | <img src=".github/assets/bounce.gif" width="300" alt="Bounce Demo"/> | |
+| BSOD | <img src=".github/assets/demo.gif" width="300" alt="BSOD Demo"/> | The screen turns blue when any (recognized) key is pressed. |
+| Sprite Demo | <img src=".github/assets/sprite.gif" width="300" alt="Sprite Demo"/> | The smiley (both neutral and smiling) is a custom sprite encoded in the ROM. It can be controlled with keyboard input. When smiling, the sprite moves faster. |
 
 ## License
 

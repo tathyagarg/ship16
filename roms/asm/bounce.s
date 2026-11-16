@@ -1,3 +1,5 @@
+.section text
+
 START:
   MOVC 0, 0
   CLS
