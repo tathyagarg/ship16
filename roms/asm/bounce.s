@@ -12,14 +12,14 @@ START:
   MOV rF, 1
 
   TCFG 1, 1
-  MOV  r4, 100
+  MOV  r4, 5
   TC   r4
   TR   r4
-  ENINT 2
 
   SETI SPEED_CHANGE
-  VEC  2
-  ENINT 0b100
+  VEC  0b010
+
+  ENINT 0b110
   EI
 
   SETI 0

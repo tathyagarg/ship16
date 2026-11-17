@@ -9,7 +9,7 @@ pub struct Timer {
 }
 
 impl Timer {
-    const PRESCALER: u16 = 1024;
+    const PRESCALER: u16 = 16667;
 
     pub fn new() -> Self {
         Timer {
