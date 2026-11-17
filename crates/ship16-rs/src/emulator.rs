@@ -361,9 +361,8 @@ impl Emulator {
                 let dst_addr = self.cpu.index;
 
                 for i in 0..size {
-                    let byte = self.memory.read_byte(src_addr.wrapping_add(i as u16));
-                    self.memory
-                        .write_byte(dst_addr.wrapping_add(i as u16), byte);
+                    let byte = self.memory.read_byte(src_addr.wrapping_add(i));
+                    self.memory.write_byte(dst_addr.wrapping_add(i), byte);
                 }
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
