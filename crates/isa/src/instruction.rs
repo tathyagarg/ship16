@@ -495,6 +495,7 @@ pub fn instr_requires_extra(instr: &Instr) -> bool {
             | Instr::AluImm { .. }
             | Instr::SkipIfImm { .. }
             | Instr::PushLong(_)
+            | Instr::AddIndexLong(_)
     )
 }
 

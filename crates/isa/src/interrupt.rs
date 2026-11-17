@@ -65,6 +65,16 @@ impl InterruptController {
         (self.requested & self.enabled & interrupt.bit()) != 0
     }
 
+    pub fn consume_wake(&mut self) {
+        let pending = self.requested & self.enabled;
+        let Some(i) = Interrupt::ALL.into_iter().find(|i| pending & i.bit() != 0) else {
+            return;
+        };
+        if !self.master || self.vectors[i as usize].is_none() {
+            self.requested &= !pending;
+        }
+    }
+
     pub fn acknowledge_interrupt(&mut self, interrupt: Interrupt) {
         self.requested &= !interrupt.bit();
     }

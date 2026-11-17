@@ -56,8 +56,6 @@ impl Program {
                             size = 1;
                         }
 
-                        println!("Instruction: {}, Size: {}", instr.opcode, size);
-
                         current_address += 2 * size;
                         section.instructions.push(instr.clone());
                     }

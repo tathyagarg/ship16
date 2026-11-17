@@ -30,7 +30,7 @@ fn main() {
     let tokens = lex_from_file(&args.input).expect("Failed to lex the file");
     if args.lex {
         for token in &tokens {
-            println!("{:?}", token);
+            dbg!("{:?}", token);
         }
         return;
     }
@@ -38,14 +38,12 @@ fn main() {
     let mut parser = parser::Parser::new(&tokens);
     let program = parser.parse_program().expect("Failed to parse the program");
     if args.parse {
-        println!("{:#?}", program);
+        dbg!("{:#?}", program);
         return;
     }
 
     validate_program(&program).expect("Program validation failed");
     let res = resolve(program).expect("Program resolution failed");
-    dbg!("Resolved program: {:?}", &res);
-
     let bytes = res.encode();
 
     for (i, byte) in bytes.iter().enumerate() {

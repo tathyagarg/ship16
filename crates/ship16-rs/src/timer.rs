@@ -9,11 +9,11 @@ pub struct Timer {
 }
 
 impl Timer {
-    const PRESCALER: u16 = 16667;
+    const PRESCALER: u16 = 1024;
 
     pub fn new() -> Self {
         Timer {
-            enabled: true,
+            enabled: false,
             periodic: false,
             counter: 0,
             reload_to: 0,

@@ -386,11 +386,17 @@ impl Memory {
         self.0[address as usize]
     }
 
-    pub fn read_sprite(&self, start_address: usize) -> [u8; 64] {
+    pub fn read_sprite(&self, start_address: usize) -> Option<[u8; 64]> {
         let end_address = start_address + 64;
-        self.0[start_address..end_address]
-            .try_into()
-            .expect("Failed to read sprite data")
+        if end_address > self.0.len() {
+            return None;
+        }
+
+        Some(
+            self.0[start_address..end_address]
+                .try_into()
+                .expect("Failed to read sprite data"),
+        )
     }
 
     pub fn write_byte(&mut self, address: u16, value: u8) {

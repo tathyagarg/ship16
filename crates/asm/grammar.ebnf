@@ -1,3 +1,13 @@
+(*
+
+
+NOTE:
+
+THIS IS OUTDATED AND SHOULD NOT BE REFERRED TO!!
+
+
+*)
+
 program = ( "\n", statement, "\n" ) * ;
 
 statement = label | instruction ;

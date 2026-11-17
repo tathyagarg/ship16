@@ -9,6 +9,7 @@ fn benchmark_cpu(c: &mut Criterion) {
         b.iter_batched(
             || {
                 let mut emu = Emulator::new();
+                emu.start();
                 emu.load_rom(&rom).unwrap();
                 emu
             },

@@ -150,17 +150,14 @@ impl Emulator {
     }
 
     pub fn draw_sprite(&mut self, sprite_index: u8) {
-        let sprite_data = self
-            .memory
-            .read_sprite((self.cpu.index + (64 * sprite_index as u16)) as usize);
+        let start_address = self.cpu.index.wrapping_add(sprite_index as u16 * 64);
 
-        for (i, &color) in sprite_data.iter().enumerate() {
-            let x = (self.ppu.x + (i as u8 % 8)) % 64;
-            let y = (self.ppu.y + (i as u8 / 8)) % 64;
-            if x > 7 {
-                trace!(self, "Sprite drawing out of bounds: x={x}, y={y}");
+        if let Some(sprite_data) = self.memory.read_sprite(start_address as usize) {
+            for (i, &color) in sprite_data.iter().enumerate() {
+                let x = (self.ppu.x + (i as u8 % 8)) % 64;
+                let y = (self.ppu.y + (i as u8 / 8)) % 64;
+                self.memory.draw_color(color, x, y);
             }
-            self.memory.draw_color(color, x, y);
         }
     }
 
@@ -195,7 +192,7 @@ impl Emulator {
 
         match instr {
             Instr::Nop => {}
-            Instr::Halt => self.cpu.waiting = true,
+            Instr::Halt => self.running = false,
             Instr::Wait => self.cpu.waiting = true,
 
             Instr::Load8(reg_x) => {
@@ -310,10 +307,6 @@ impl Emulator {
                 skip = cond.eval(self.cpu.registers[reg_x], self.cpu.registers[reg_y]);
             }
             Instr::SkipIfImm { cond, reg_x, imm } => {
-                trace!(
-                    self,
-                    "Evaluating skip condition: {:?} {} {}", cond, self.cpu.registers[reg_x], imm
-                );
                 skip = cond.eval(self.cpu.registers[reg_x], imm);
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
@@ -381,16 +374,12 @@ impl Emulator {
 
     pub fn step_cpu(&mut self) -> u32 {
         if self.cpu.waiting {
-            if self
-                .interrupt_controller
-                .has_pending_interrupt(Interrupt::Timer)
-            {
-                self.cpu.waiting = false;
-                self.interrupt_controller
-                    .acknowledge_interrupt(Interrupt::Timer);
-            } else {
+            if !self.interrupt_controller.has_pending() {
                 return 1;
             }
+
+            self.cpu.waiting = false;
+            self.interrupt_controller.consume_wake();
         }
 
         if let Some(cycles) = self.service_interrupt() {

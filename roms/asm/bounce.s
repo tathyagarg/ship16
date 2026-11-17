@@ -12,7 +12,7 @@ START:
   MOV rF, 1
 
   TCFG 1, 1
-  MOV  r4, 1
+  MOV  r4, 100
   TC   r4
   TR   r4
   ENINT 2

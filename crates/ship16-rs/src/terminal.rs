@@ -85,6 +85,7 @@ fn render(
     buffer: &mut String,
     truecolor: bool,
     emu: &Emulator,
+    debug: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     buffer.clear();
     let title = " Ship-16 Emulator ";
@@ -131,31 +132,9 @@ fn render(
     buffer.push_str(&"─".repeat(64));
     buffer.push_str("┘\r\n");
 
-    buffer.push_str("Registers:\r\n");
-    for (i, reg) in emu.regs().iter().enumerate() {
-        write!(buffer, "R{:01X}: {:04X}  ", i, reg)?;
-        if i % 4 == 3 {
-            buffer.push('\r');
-            buffer.push('\n');
-        }
+    if debug {
+        push_debug_panel(buffer, emu)?;
     }
-
-    buffer.push_str("\r\nTimer:\r\n");
-
-    write!(
-        buffer,
-        "Counter: {:04X}  Reload: {:04X}  PSA: {:08X}\r\n",
-        emu.timer().counter,
-        emu.timer().reload_to,
-        emu.timer().prescaler_accumulator
-    )?;
-
-    write!(
-        buffer,
-        "Enabled: {}  Periodic: {}\r\n",
-        emu.timer().enabled,
-        emu.timer().periodic
-    )?;
 
     Ok(())
 }
@@ -189,9 +168,53 @@ pub fn draw(
     buffer: &mut String,
     truecolor: bool,
     emu: &Emulator,
+    debug: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    render(vram, buffer, truecolor, emu)?;
+    render(vram, buffer, truecolor, emu, debug)?;
     out.write_all(buffer.as_bytes())?;
     out.flush()?;
     Ok(())
+}
+const MIN_COLS: u16 = 66;
+const SCREEN_ROWS: u16 = 35;
+const DEBUG_ROWS: u16 = 9;
+
+pub fn required_size(debug: bool) -> (u16, u16) {
+    (MIN_COLS, SCREEN_ROWS + if debug { DEBUG_ROWS } else { 0 })
+}
+
+pub fn check_size(debug: bool) -> Result<(), String> {
+    let (cols, rows) =
+        crossterm::terminal::size().map_err(|e| format!("cannot read terminal size: {e}"))?;
+    let (need_cols, need_rows) = required_size(debug);
+    if cols < need_cols || rows < need_rows {
+        return Err(format!(
+            "terminal is {cols}x{rows}; need at least {need_cols}x{need_rows}"
+        ));
+    }
+    Ok(())
+}
+
+fn push_debug_panel(buffer: &mut String, emu: &Emulator) -> std::fmt::Result {
+    buffer.push_str("Registers:\r\n");
+    for (i, reg) in emu.regs().iter().enumerate() {
+        write!(buffer, "R{:01X}: {:04X}  ", i, reg)?;
+        if i % 4 == 3 {
+            buffer.push_str("\r\n");
+        }
+    }
+    buffer.push_str("\r\nTimer:\r\n");
+    write!(
+        buffer,
+        "Counter: {:04X}  Reload: {:04X}  PSA: {:08X}\r\n",
+        emu.timer().counter,
+        emu.timer().reload_to,
+        emu.timer().prescaler_accumulator
+    )?;
+    write!(
+        buffer,
+        "Enabled: {}  Periodic: {}\r\n",
+        emu.timer().enabled,
+        emu.timer().periodic
+    )
 }
