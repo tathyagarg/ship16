@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufWriter, Write},
 };
@@ -60,6 +61,8 @@ pub struct Emulator {
     running: bool,
 
     frame_ready: bool,
+
+    decode_cache: HashMap<(u16, u16), Instr>,
 }
 
 impl Emulator {
@@ -80,6 +83,8 @@ impl Emulator {
             running: false,
 
             frame_ready: false,
+
+            decode_cache: HashMap::new(),
         }
     }
 
@@ -89,6 +94,10 @@ impl Emulator {
 
     pub fn timer(&self) -> &timer::Timer {
         &self.timer
+    }
+
+    pub fn read_bytes(&self, address: u16, size: usize) -> Option<&[u8]> {
+        self.memory.read_bytes(address as usize, size)
     }
 
     pub fn vram(&self) -> &[u8] {
@@ -179,6 +188,11 @@ impl Emulator {
 
         self.cpu.pc = self.cpu.pc.wrapping_add(2);
 
+        if let Some(instr) = self.decode_cache.get(&(word, ext)) {
+            trace!(self, "[{pc:04X}] {instr:?}");
+            return instr.base_cycles();
+        }
+
         let instr = match decode(word, ext) {
             Ok(instr) => instr,
             Err(e) => {
@@ -189,6 +203,8 @@ impl Emulator {
         };
         trace!(self, "[{pc:04X}] {instr:?}");
         let mut skip = false;
+
+        self.decode_cache.insert((word, ext), instr.clone());
 
         match instr {
             Instr::Nop => {}
@@ -338,6 +354,17 @@ impl Emulator {
             Instr::SetIndex(address) => self.cpu.index = address,
             Instr::SetIndexLong(address) => {
                 self.cpu.index = address;
+                self.cpu.pc = self.cpu.pc.wrapping_add(2);
+            }
+            Instr::MemCpy(src, size) => {
+                let src_addr = self.cpu.registers[src];
+                let dst_addr = self.cpu.index;
+
+                for i in 0..size {
+                    let byte = self.memory.read_byte(src_addr.wrapping_add(i as u16));
+                    self.memory
+                        .write_byte(dst_addr.wrapping_add(i as u16), byte);
+                }
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);
             }
         }

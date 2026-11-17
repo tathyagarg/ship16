@@ -1,11 +1,11 @@
 use crate::ast::*;
 
-const VALID_OPCODES: [&str; 55] = [
+const VALID_OPCODES: [&str; 56] = [
     "NOP", "LD8", "ST8", "LD16", "ST16", "AI", "PUSH", "POP", "FSKP", "FNSKP", "CLS", "TC", "TR",
     "LDTC", "TCFG", "ENINT", "DISINT", "VEC", "EI", "DI", "WAIT", "DRW", "DRWR", "DRWS", "DRWSR",
     "MOVC", "INCX", "INCY", "DECX", "DECY", "SETX", "SETY", "JMP", "SKP", "MOV", "CALL", "RET",
     "RETI", "KSKP", "ADD", "SUB", "MUL", "DIV", "REM", "AND", "OR", "XOR", "NOT", "SHL", "SHR",
-    "ROL", "ROR", "RAND", "SETI", "HLT",
+    "ROL", "ROR", "RAND", "SETI", "MEMCPY", "HLT",
 ];
 
 macro_rules! check_operands {
@@ -121,6 +121,7 @@ fn is_valid_instruction(instr: &Instruction) -> Result<(), String> {
         "ROR" => [[Register], [Register | Immediate]],
         "RAND" => [[Register]],
         "SETI" => [[Label | Immediate]],
+        "MEMCPY" => [[Register], [Register | Immediate]],
         "HLT" => [],
     });
 

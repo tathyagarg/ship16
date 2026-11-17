@@ -252,6 +252,11 @@ impl Instruction {
                 }
             }
 
+            "MEMCPY" => isa::Instr::MemCpy(
+                self.operands[0].expect_register()?,
+                self.operands[1].expect_immediate()?,
+            ),
+
             "HLT" => isa::Instr::Halt,
 
             _ => panic!("Unsupported opcode: {}", self.opcode),

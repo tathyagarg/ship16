@@ -386,6 +386,15 @@ impl Memory {
         self.0[address as usize]
     }
 
+    pub fn read_bytes(&self, start_address: usize, length: usize) -> Option<&[u8]> {
+        let end_address = start_address + length;
+        if end_address > self.0.len() {
+            return None;
+        }
+
+        Some(&self.0[start_address..end_address])
+    }
+
     pub fn read_sprite(&self, start_address: usize) -> Option<[u8; 64]> {
         let end_address = start_address + 64;
         if end_address > self.0.len() {

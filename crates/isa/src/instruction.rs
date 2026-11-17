@@ -138,7 +138,7 @@ pub struct AluOut {
     pub overflow: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instr {
     Nop,
     Halt,
@@ -228,6 +228,8 @@ pub enum Instr {
     Random(RegisterIndex),
     SetIndex(u16),
     SetIndexLong(u16),
+
+    MemCpy(RegisterIndex, u16),
 }
 
 impl Instr {
@@ -349,6 +351,8 @@ impl Instr {
                     Some(*imm),
                 )
             }
+
+            Self::MemCpy(reg, addr) => (0xF600 | (*reg as u16), Some(*addr)),
 
             Self::Halt => (0xFFFF, None),
         }
@@ -473,6 +477,8 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
             imm: extra,
         },
 
+        0xF600..=0xF60F => Instr::MemCpy(nib(0), extra),
+
         0xFFFF => Instr::Halt,
         _ => return Err(bad),
     })
@@ -481,7 +487,7 @@ pub fn decode(raw: u16, extra: u16) -> Result<Instr, Illegal> {
 pub fn requires_extra(opcode: u16) -> bool {
     matches!(
         opcode,
-        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF | 0x0320 | 0x0250
+        0xF000 | 0xF100 | 0xF200 | 0xF300..=0xF30F | 0xF400..=0xF4FF | 0xF500..=0xF5FF | 0x0320 | 0x0250 | 0xF600..=0xF60F
     )
 }
 
@@ -496,6 +502,7 @@ pub fn instr_requires_extra(instr: &Instr) -> bool {
             | Instr::SkipIfImm { .. }
             | Instr::PushLong(_)
             | Instr::AddIndexLong(_)
+            | Instr::MemCpy(_, _)
     )
 }
 
@@ -506,7 +513,7 @@ pub fn instr_size(instr: &Instr) -> u16 {
 pub fn instr_size_from_name(name: &str) -> u16 {
     match name.to_ascii_uppercase().as_str() {
         "JMP" | "CALL" | "SETI" | "MOV" | "ADD" | "SUB" | "MUL" | "DIV" | "REM" | "AND" | "OR"
-        | "XOR" | "SHL" | "SHR" | "ROL" | "ROR" | "SKP" | "AI" => 2,
+        | "XOR" | "SHL" | "SHR" | "ROL" | "ROR" | "SKP" | "AI" | "MEMCPY" => 2,
         _ => 1,
     }
 }

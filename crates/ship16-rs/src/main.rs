@@ -20,6 +20,9 @@ struct Args {
 
     #[arg(short, long, default_value_t = false)]
     debug: bool,
+
+    #[arg(short, long, value_name = "ADDRESS")]
+    inspect: Option<u16>,
 }
 
 const FRAME_DURATION: Duration = Duration::from_micros(CYCLES_PER_FRAME);
@@ -45,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let _guard = terminal::TerminalGuard::new()?;
-        frame_loop(&mut emulator, args.debug)?;
+        frame_loop(&mut emulator, args.debug, args.inspect)?;
         if !emulator.is_running() {
             terminal::restore_terminal();
         }
@@ -54,7 +57,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn frame_loop(emu: &mut Emulator, debug: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn frame_loop(
+    emu: &mut Emulator,
+    debug: bool,
+    inspect: Option<u16>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut frame = String::with_capacity(16 * 1024);
     let mut next = Instant::now();
 
@@ -75,6 +82,7 @@ fn frame_loop(emu: &mut Emulator, debug: bool) -> Result<(), Box<dyn std::error:
             truecolor,
             emu,
             debug,
+            inspect,
         )?;
 
         next += FRAME_DURATION;

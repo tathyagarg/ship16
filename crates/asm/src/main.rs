@@ -46,9 +46,19 @@ fn main() {
     let res = resolve(program).expect("Program resolution failed");
     let bytes = res.encode();
 
+    print!("      ");
+    for i in 0..16 {
+        if i % 2 == 0 {
+            print!("| ");
+        }
+        print!("{:02X} ", i);
+    }
     for (i, byte) in bytes.iter().enumerate() {
-        if i % 20 == 0 {
-            print!("\n{:04X}: ", i);
+        if i % 16 == 0 {
+            print!("\n{:04X}: ", i + 0x1000);
+        }
+        if i % 2 == 0 {
+            print!("| ");
         }
         print!("{:02X} ", byte);
     }

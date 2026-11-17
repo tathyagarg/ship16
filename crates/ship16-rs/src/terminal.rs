@@ -86,6 +86,7 @@ fn render(
     truecolor: bool,
     emu: &Emulator,
     debug: bool,
+    inspect: Option<u16>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     buffer.clear();
     let title = " Ship-16 Emulator ";
@@ -136,6 +137,10 @@ fn render(
         push_debug_panel(buffer, emu)?;
     }
 
+    if let Some(addr) = inspect {
+        push_inspect_panel(buffer, emu, addr)?;
+    }
+
     Ok(())
 }
 
@@ -169,8 +174,9 @@ pub fn draw(
     truecolor: bool,
     emu: &Emulator,
     debug: bool,
+    inspect: Option<u16>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    render(vram, buffer, truecolor, emu, debug)?;
+    render(vram, buffer, truecolor, emu, debug, inspect)?;
     out.write_all(buffer.as_bytes())?;
     out.flush()?;
     Ok(())
@@ -217,4 +223,21 @@ fn push_debug_panel(buffer: &mut String, emu: &Emulator) -> std::fmt::Result {
         emu.timer().enabled,
         emu.timer().periodic
     )
+}
+
+fn push_inspect_panel(buffer: &mut String, emu: &Emulator, addr: u16) -> std::fmt::Result {
+    if let Some(bytes) = emu.read_bytes(addr, 128) {
+        buffer.push_str(&format!("\r\nMemory at {:04X}:\r\n", addr));
+        for (i, chunk) in bytes.chunks(16).enumerate() {
+            write!(buffer, "{:04X}: ", addr + (i * 16) as u16)?;
+            for byte in chunk {
+                write!(buffer, "{:02X} ", byte)?;
+            }
+            buffer.push_str("\r\n");
+        }
+    } else {
+        buffer.push_str(&format!("Memory at {:04X}: <out of bounds>\r\n", addr));
+    }
+
+    Ok(())
 }
