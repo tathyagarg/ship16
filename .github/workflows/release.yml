@@ -41,11 +41,15 @@ jobs:
           mkdir -p dist
 
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            cp target/${{ matrix.target }}/release/ship16.exe dist/
-            cp target/${{ matrix.target }}/release/asm.exe dist/
+            cp target/${{ matrix.target }}/release/ship16.exe \
+              dist/ship16-${{ matrix.target }}.exe
+            cp target/${{ matrix.target }}/release/asm.exe \
+              dist/asm-${{ matrix.target }}.exe
           else
-            cp target/${{ matrix.target }}/release/ship16 dist/
-            cp target/${{ matrix.target }}/release/asm dist/
+            cp target/${{ matrix.target }}/release/ship16 \
+              dist/ship16-${{ matrix.target }}
+            cp target/${{ matrix.target }}/release/asm \
+              dist/asm-${{ matrix.target }}
           fi
 
       - uses: actions/upload-artifact@v4
