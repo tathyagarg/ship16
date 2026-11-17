@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::File,
     io::{BufWriter, Write},
 };
@@ -61,8 +60,6 @@ pub struct Emulator {
     running: bool,
 
     frame_ready: bool,
-
-    decode_cache: HashMap<(u16, u16), Instr>,
 }
 
 impl Emulator {
@@ -83,8 +80,6 @@ impl Emulator {
             running: false,
 
             frame_ready: false,
-
-            decode_cache: HashMap::new(),
         }
     }
 
@@ -188,11 +183,6 @@ impl Emulator {
 
         self.cpu.pc = self.cpu.pc.wrapping_add(2);
 
-        if let Some(instr) = self.decode_cache.get(&(word, ext)) {
-            trace!(self, "[{pc:04X}] {instr:?}");
-            return instr.base_cycles();
-        }
-
         let instr = match decode(word, ext) {
             Ok(instr) => instr,
             Err(e) => {
@@ -203,8 +193,6 @@ impl Emulator {
         };
         trace!(self, "[{pc:04X}] {instr:?}");
         let mut skip = false;
-
-        self.decode_cache.insert((word, ext), instr.clone());
 
         match instr {
             Instr::Nop => {}
@@ -247,7 +235,7 @@ impl Emulator {
             }
             Instr::PushLong(value) => {
                 if let Err(e) = self.cpu.push_u16(&mut self.memory, value) {
-                    self.log(&format!("Stack overflow at {:04X}: {:?}", pc, e));
+                    trace!(self, "Stack overflow at {:04X}: {:?}", pc, e);
                     self.running = false;
                 }
                 self.cpu.pc = self.cpu.pc.wrapping_add(2);

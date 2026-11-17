@@ -1,6 +1,26 @@
 .section text
 
 ; ==========================================
+; CONWAY'S GAME OF LIFE (toroidal)
+;
+; The 64x64 world is stored in two padded 66x66 grids, so each cell's
+; eight neighbours are fixed offsets and no per-neighbour wrapping is
+; needed. The one-cell ring around the world mirrors the opposite edge
+; and is refreshed once per generation.
+;
+; Cell (x, y) lives at  base + (y + 1) * 66 + (x + 1).
+;
+;   0xC000  display framebuffer (64x64): 0x00 dead, 0xFF alive, 0x7F cursor
+;   0xD000  current generation, padded 66x66 (0 dead, 1 alive)  -> 0xE103
+;   0xE200  next generation,    padded 66x66 (0 dead, 1 alive)  -> 0xF303
+;
+; rE = number of completed generations (wraps at 65536)
+;
+; Editor keys: 1 left, 2 right, 0 up, 9 down, F toggle cell, A start.
+; ==========================================
+
+
+; ==========================================
 ; INITIALIZATION
 ; ==========================================
 
@@ -27,9 +47,9 @@ CLEAR_DISPLAY:
   SKP<EQ> r0, 0
   JMP CLEAR_DISPLAY
 
-  ; Clear authoritative grid
+  ; Clear current generation (4356 = 66 * 66)
   SETI 0xD000
-  MOV r0, 4096
+  MOV r0, 4356
 
 CLEAR_GRID:
   ST8 r1
@@ -39,8 +59,8 @@ CLEAR_GRID:
   JMP CLEAR_GRID
 
   ; Clear next-generation buffer
-  SETI 0xE000
-  MOV r0, 4096
+  SETI 0xE200
+  MOV r0, 4356
 
 CLEAR_NEXT:
   ST8 r1
@@ -52,14 +72,18 @@ CLEAR_NEXT:
   ; Initialize cursor
   MOV r0, 32
   MOV r1, 32
+  MOV rD, 0
+  MOV rE, 0                ; generation counter
   JMP DRAW_CURSOR
 
 
 ; ==========================================
 ; EDITOR
 ;
-; r0 = cursor X
-; r1 = cursor Y
+; r0 = cursor X (0..63)
+; r1 = cursor Y (0..63)
+; r5 = display offset  y * 64 + x
+; r6 = grid offset     y * 66 + x + 67
 ; rC = movement direction
 ;
 ; 0 = left
@@ -100,25 +124,40 @@ CHECK_DOWN:
 
 
 ; ==========================================
-; PLACE CELL
+; TOGGLE CELL
+;
+; F flips the cell under the cursor, once per key press.
+; rD = 1 while F is being held, so holding the key does not
+; flip the cell every frame.
 ; ==========================================
 
 CHECK_PLACE:
   KSKP 15
-  JMP CHECK_START
+  JMP PLACE_RELEASED
 
-  MOV r5, r1
-  MUL r5, 64
-  ADD r5, r0
+  SKP<EQ> rD, 0
+  JMP EDITOR               ; still held from an earlier frame
 
-  ; Update authoritative grid
+  MOV rD, 1
+
+  MOV r6, r1
+  MUL r6, 66
+  ADD r6, r0
+  ADD r6, 67
+
+  ; Flip the authoritative grid cell (0 <-> 1)
   SETI 0xD000
-  AI r5
-  MOV r8, 0xFF
+  AI r6
+  LD8 r8
+  XOR r8, 1
   ST8 r8
 
   ; Cursor remains drawn over the cell
   JMP EDITOR
+
+PLACE_RELEASED:
+  MOV rD, 0
+  JMP CHECK_START
 
 
 ; ==========================================
@@ -134,9 +173,15 @@ CHECK_START:
   MUL r5, 64
   ADD r5, r0
 
+  MOV r6, r1
+  MUL r6, 66
+  ADD r6, r0
+  ADD r6, 67
+
   SETI 0xD000
-  AI r5
+  AI r6
   LD8 r8
+  MUL r8, 255
 
   SETI 0xC000
   AI r5
@@ -150,14 +195,20 @@ CHECK_START:
 ; ==========================================
 
 MOVE_CURSOR:
-  ; Restore previous cursor position
+  ; Restore previous cursor position from the grid
   MOV r5, r1
   MUL r5, 64
   ADD r5, r0
 
+  MOV r6, r1
+  MUL r6, 66
+  ADD r6, r0
+  ADD r6, 67
+
   SETI 0xD000
-  AI r5
+  AI r6
   LD8 r8
+  MUL r8, 255
 
   SETI 0xC000
   AI r5
@@ -206,14 +257,11 @@ UP_NORMAL:
 
   ; DOWN
 MOVE_DOWN:
-  SKP<EQ> r1, 63
-  JMP DOWN_NORMAL
-
-  MOV r1, 0
+  ADD r1, 1
+  SKP<EQ> r1, 64
   JMP DRAW_CURSOR
 
-DOWN_NORMAL:
-  ADD r1, 1
+  MOV r1, 0
   JMP DRAW_CURSOR
 
 
@@ -239,239 +287,140 @@ DRAW_CURSOR:
 ; ==========================================
 
 UPDATE:
+
+; ------------------------------------------
+; Refresh the ghost ring of the current grid
+; (padded rows/columns 0 and 65 mirror the opposite edge)
+; ------------------------------------------
+
+  ; Row 0, columns 1..64  <-  row 64, columns 1..64
+  MOV r5, 0xE081
+  SETI 0xD001
+  MEMCPY r5, 64
+
+  ; Row 65, columns 1..64  <-  row 1, columns 1..64
+  MOV r5, 0xD043
+  SETI 0xE0C3
+  MEMCPY r5, 64
+
+  ; Columns 0 and 65 of all 66 rows (also fills the corners)
+  MOV r6, 0
+  MOV r0, 66
+
+GHOST_COLUMNS:
+  SETI 0xD040              ; column 64 -> column 0
+  AI r6
+  LD8 r8
+  SETI 0xD000
+  AI r6
+  ST8 r8
+
+  SETI 0xD001              ; column 1 -> column 65
+  AI r6
+  LD8 r8
+  SETI 0xD041
+  AI r6
+  ST8 r8
+
+  ADD r6, 66
+  SUB r0, 1
+  SKP<EQ> r0, 0
+  JMP GHOST_COLUMNS
+
+; ------------------------------------------
+; Compute the next generation
+;
+; Neighbour offsets from a cell:
+;
+;   -67 -66 -65
+;    -1   .  +1
+;   +65 +66 +67
+;
+; AI with a 16-bit immediate wraps, so AI 0xFFBD subtracts 67.
+;
+; r0 = X                 r4 = next cell (0 or 1)
+; r1 = Y                 r5 = display offset  y * 64 + x
+; r2 = neighbour count   r6 = grid offset     y * 66 + x + 67
+; r3 = current cell      r8 = temporary
+;
+; A cell is alive next generation when (neighbours OR current) == 3.
+; ------------------------------------------
+
   MOV r0, 0
   MOV r1, 0
+  MOV r5, 0
+  MOV r6, 67
 
-; r0 = X
-; r1 = Y
-; r2 = neighbour count
-; r3 = current cell
-; r4 = next cell
-; r5 = memory offset
-; r6 = neighbour X
-; r7 = neighbour Y
-; r8 = temporary value
-; r9 = X direction
-; rA = Y direction
-
-CELL_LOOP:
-  ; Read current cell
-  MOV r5, r1
-  MUL r5, 64
-  ADD r5, r0
-
+CELL:
   SETI 0xD000
-  AI r5
+  AI r6
   LD8 r3
-
   MOV r2, 0
 
-  ; Neighbour 1: (-1, -1)
-  MOV r9, 0
-  MOV rA, 0
-  CALL COUNT_AT
+  AI 0xFFBD                ; -67
+  LD8 r8
+  ADD r2, r8
+  AI 1                     ; -66
+  LD8 r8
+  ADD r2, r8
+  AI 1                     ; -65
+  LD8 r8
+  ADD r2, r8
+  AI 64                    ; -1
+  LD8 r8
+  ADD r2, r8
+  AI 2                     ; +1
+  LD8 r8
+  ADD r2, r8
+  AI 64                    ; +65
+  LD8 r8
+  ADD r2, r8
+  AI 1                     ; +66
+  LD8 r8
+  ADD r2, r8
+  AI 1                     ; +67
+  LD8 r8
+  ADD r2, r8
 
-  ; Neighbour 2: (0, -1)
-  MOV r9, 1
-  MOV rA, 0
-  CALL COUNT_AT
-
-  ; Neighbour 3: (+1, -1)
-  MOV r9, 2
-  MOV rA, 0
-  CALL COUNT_AT
-
-  ; Neighbour 4: (-1, 0)
-  MOV r9, 0
-  MOV rA, 1
-  CALL COUNT_AT
-
-  ; Neighbour 5: (+1, 0)
-  MOV r9, 2
-  MOV rA, 1
-  CALL COUNT_AT
-
-  ; Neighbour 6: (-1, +1)
-  MOV r9, 0
-  MOV rA, 2
-  CALL COUNT_AT
-
-  ; Neighbour 7: (0, +1)
-  MOV r9, 1
-  MOV rA, 2
-  CALL COUNT_AT
-
-  ; Neighbour 8: (+1, +1)
-  MOV r9, 2
-  MOV rA, 2
-  CALL COUNT_AT
-
-  ; Apply Conway's rules
+  OR r2, r3
   MOV r4, 0
+  SKP<NE> r2, 3
+  MOV r4, 1
 
-  ; Exactly three neighbours: alive
-  SKP<EQ> r2, 3
-  JMP CHECK_TWO
-
-  MOV r4, 0xFF
-  JMP STORE_NEXT
-
-CHECK_TWO:
-  ; Exactly two neighbours: preserve state
-  SKP<EQ> r2, 2
-  JMP STORE_NEXT
-
-  MOV r4, r3
-
-STORE_NEXT:
   ; Store into next-generation buffer
-  MOV r5, r1
-  MUL r5, 64
-  ADD r5, r0
-
-  SETI 0xE000
-  AI r5
+  SETI 0xE200
+  AI r6
   ST8 r4
 
-  ; Advance X
+  ; Update display (0 -> 0x00, 1 -> 0xFF)
+  MOV r8, r4
+  MUL r8, 255
+  SETI 0xC000
+  AI r5
+  ST8 r8
+
+  ADD r5, 1
+  ADD r6, 1
   ADD r0, 1
-
   SKP<EQ> r0, 64
-  JMP CELL_LOOP
+  JMP CELL
 
+  ; End of row: skip the two ghost columns
   MOV r0, 0
+  ADD r6, 2
   ADD r1, 1
-
   SKP<EQ> r1, 64
-  JMP CELL_LOOP
+  JMP CELL
 
 
 ; ==========================================
 ; COPY NEXT GENERATION
-; E000 -> D000 and C000
+; 0xE200 -> 0xD000 (the display was updated per cell)
 ; ==========================================
 
-  MOV r0, 0
-
-COPY_LOOP:
-  MOV r5, 0xE000
+  MOV r5, 0xE200
   SETI 0xD000
-  MEMCPY r5, 4096
+  MEMCPY r5, 4356
 
-  MOV r5, 0xD000
-  SETI 0xC000
-  MEMCPY r5, 4096
-
+  ADD rE, 1                ; one more generation completed
   JMP UPDATE
-
-  ; SETI 0xE000
-  ; AI r0
-  ; LD8 r8
-
-  ; ; Update authoritative grid
-  ; SETI 0xD000
-  ; AI r0
-  ; ST8 r8
-
-  ; ; Update display
-  ; SETI 0xC000
-  ; AI r0
-  ; ST8 r8
-
-  ; ADD r0, 1
-
-  ; SKP<EQ> r0, 4096
-  ; JMP COPY_LOOP
-
-  ; JMP UPDATE
-
-
-; ==========================================
-; COUNT_AT
-;
-; r9 = X direction
-; rA = Y direction
-;
-; 0 = decrement
-; 1 = unchanged
-; 2 = increment
-;
-; Increments r2 if neighbour is alive.
-; ==========================================
-
-COUNT_AT:
-  MOV r6, r0
-  MOV r7, r1
-
-  ; Wrap X coordinate
-
-  SKP<EQ> r9, 0
-  JMP CX_INCREMENT
-
-  SKP<EQ> r6, 0
-  JMP CX_DECREMENT
-
-  MOV r6, 63
-  JMP CY_START
-
-CX_DECREMENT:
-  SUB r6, 1
-  JMP CY_START
-
-CX_INCREMENT:
-  SKP<EQ> r9, 2
-  JMP CY_START
-
-  ADD r6, 1
-  SKP<EQ> r6, 64
-  JMP CY_START
-
-  MOV r6, 0
-
-
-  ; Wrap Y coordinate
-
-CY_START:
-  SKP<EQ> rA, 0
-  JMP CY_INCREMENT
-
-  SKP<EQ> r7, 0
-  JMP CY_DECREMENT
-
-  MOV r7, 63
-  JMP READ_NEIGHBOUR
-
-CY_DECREMENT:
-  SUB r7, 1
-  JMP READ_NEIGHBOUR
-
-CY_INCREMENT:
-  SKP<EQ> rA, 2
-  JMP READ_NEIGHBOUR
-
-  ADD r7, 1
-  SKP<EQ> r7, 64
-  JMP READ_NEIGHBOUR
-
-  MOV r7, 0
-
-
-READ_NEIGHBOUR:
-  ; Calculate address
-  MOV r5, r7
-  MUL r5, 64
-  ADD r5, r6
-
-  SETI 0xD000
-  AI r5
-  LD8 r8
-
-  ; Increment neighbour count if alive
-  SKP<NE> r8, 0
-  JMP COUNT_DONE
-
-  ADD r2, 1
-
-COUNT_DONE:
-  RET
-
