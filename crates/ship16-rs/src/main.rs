@@ -1,7 +1,8 @@
 use clap::Parser;
 use std::time::{Duration, Instant};
+use winit::event_loop::{ControlFlow, EventLoop};
 
-use crate::emulator::Emulator;
+use crate::{emulator::Emulator, window::App};
 use isa::constants::*;
 
 pub(crate) mod cpu;
@@ -9,9 +10,17 @@ pub(crate) mod emulator;
 pub(crate) mod eval;
 pub(crate) mod input;
 pub(crate) mod memory;
+pub(crate) mod palette;
 pub(crate) mod ppu;
 pub(crate) mod terminal;
 pub(crate) mod timer;
+pub(crate) mod window;
+
+#[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+enum Display {
+    Terminal,
+    Window,
+}
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -23,9 +32,12 @@ struct Args {
 
     #[arg(short, long, value_name = "ADDRESS")]
     inspect: Option<u16>,
+
+    #[arg(long, default_value_t = Display::Terminal, value_enum)]
+    display: Display,
 }
 
-const FRAME_DURATION: Duration = Duration::from_micros(CYCLES_PER_FRAME);
+pub const FRAME_DURATION: Duration = Duration::from_micros(CYCLES_PER_FRAME);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -38,7 +50,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        terminal::restore_terminal();
+        if args.display == Display::Terminal {
+            terminal::restore_terminal();
+        }
         default_hook(info);
     }));
 
@@ -46,18 +60,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     emulator.start();
     emulator.load_rom(&rom_data)?;
 
-    {
+    if args.display == Display::Terminal {
         let _guard = terminal::TerminalGuard::new()?;
-        frame_loop(&mut emulator, args.debug, args.inspect)?;
+        terminal_frame_loop(&mut emulator, args.debug, args.inspect)?;
         if !emulator.is_running() {
             terminal::restore_terminal();
         }
+    } else {
+        // window_frame_loop(emulator, args.debug, args.inspect)?;
+        window_frame_loop(emulator)?;
     }
 
     Ok(())
 }
 
-fn frame_loop(
+fn terminal_frame_loop(
     emu: &mut Emulator,
     debug: bool,
     inspect: Option<u16>,
@@ -91,6 +108,20 @@ fn frame_loop(
             None => next = Instant::now(),
         }
     }
+
+    Ok(())
+}
+
+fn window_frame_loop(
+    emu: Emulator,
+    // debug: bool,
+    // inspect: Option<u16>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let event_loop = EventLoop::new().unwrap();
+    event_loop.set_control_flow(ControlFlow::Poll);
+
+    let mut app = App::new(emu);
+    event_loop.run_app(&mut app)?;
 
     Ok(())
 }
