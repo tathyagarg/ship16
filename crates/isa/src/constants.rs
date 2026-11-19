@@ -1,7 +1,7 @@
 pub const ENTRY_POINT: u16 = 0x1000;
-pub const ROM_SIZE: usize = 0x4000; // 48KB
+pub const ROM_SIZE: usize = 0x4000; // 16KB
 pub const RAM_BASE: usize = ROM_SIZE;
-pub const RAM_SIZE: usize = 0xC000; // 16KB
+pub const RAM_SIZE: usize = 0xC000; // 48KB
 pub const STACK_TOP: u16 = 0xFFFF;
 
 pub const SCREEN_HEIGHT: usize = 64;
