@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use isa::constants::*;
-
 use crate::{ast::Instruction, resolve::ResolvedProgram};
 
 fn encode_instruction(instr: &Instruction, label_map: &HashMap<String, u16>) -> Box<[u8]> {
@@ -26,7 +24,7 @@ fn encode_instruction(instr: &Instruction, label_map: &HashMap<String, u16>) -> 
 
 impl ResolvedProgram {
     pub fn encode(mut self) -> Box<[u8]> {
-        let mut bytes = Vec::with_capacity(USER_ROM_SIZE);
+        let mut bytes = Vec::new();
         let mut label_map: HashMap<String, u16> = self
             .sections
             .iter()

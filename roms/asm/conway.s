@@ -10,7 +10,7 @@
 ;
 ; Cell (x, y) lives at  base + (y + 1) * 66 + (x + 1).
 ;
-;   0xC000  display framebuffer (64x64): 0x00 dead, 0xFF alive, 0x7F cursor
+;   0x4000  display framebuffer (64x64): 0x00 dead, 0xFF alive, 0x7F cursor
 ;   0xD000  current generation, padded 66x66 (0 dead, 1 alive)  -> 0xE103
 ;   0xE200  next generation,    padded 66x66 (0 dead, 1 alive)  -> 0xF303
 ;
@@ -36,7 +36,7 @@ START:
   EI
 
   ; Clear display framebuffer
-  SETI 0xC000
+  SETI 0x4000
   MOV r0, 4096
   MOV r1, 0
 
@@ -183,7 +183,7 @@ CHECK_START:
   LD8 r8
   MUL r8, 255
 
-  SETI 0xC000
+  SETI 0x4000
   AI r5
   ST8 r8
 
@@ -210,7 +210,7 @@ MOVE_CURSOR:
   LD8 r8
   MUL r8, 255
 
-  SETI 0xC000
+  SETI 0x4000
   AI r5
   ST8 r8
 
@@ -274,7 +274,7 @@ DRAW_CURSOR:
   MUL r5, 64
   ADD r5, r0
 
-  SETI 0xC000
+  SETI 0x4000
   AI r5
   MOV r8, 0x7F
   ST8 r8
@@ -395,7 +395,7 @@ CELL:
   ; Update display (0 -> 0x00, 1 -> 0xFF)
   MOV r8, r4
   MUL r8, 255
-  SETI 0xC000
+  SETI 0x4000
   AI r5
   ST8 r8
 
