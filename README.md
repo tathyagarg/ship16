@@ -17,6 +17,18 @@
 
 ## Getting Started
 
+### Installing Pre-Built binaries
+
+You can download pre-built binaries for your platform from the [Releases](https://github.com/tathyagarg/ship16/releases/)
+After installing the binary, you can run an example program. Copy a ROM file from the `roms` directory to your current working directory and run the emulator with the following command:
+
+```bash
+<executable_name> --rom <path_to_rom_file>
+```
+
+Where `<executable_name>` is the name of the downloaded binary and `<path_to_rom_file>` is the path to the ROM file you want to run.
+
+### Building from Source
 Clone the repository:
 
 ```bash
