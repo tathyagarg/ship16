@@ -8,7 +8,8 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{FRAME_DURATION, emulator::Emulator, palette::PALETTE};
+use super::palette::PALETTE;
+use crate::{FRAME_DURATION, emulator::Emulator};
 
 const WIDTH: u32 = 64;
 const HEIGHT: u32 = 64;

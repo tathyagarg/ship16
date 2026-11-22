@@ -12,7 +12,8 @@
   </p>
 </div>
 
-For the complete technical specification, see **[the specification](./spec.pdf)**.
+> [!NOTE]
+> For the complete technical specification, see **[the specification](./spec.pdf)**.
 
 ## Getting Started
 
@@ -32,13 +33,17 @@ cargo build --release
 Run an example program:
 
 ```bash
-cargo run --bin asm -- --input crates/asm/in/bsod.s --output output.rom &> /dev/null
-cargo run --bin ship16 -- --rom output.rom
+cargo run -p ship16-rs --release -- --rom roms/hello_world.rom
 ```
 
-### Expected Output
+## About
 
-When you run the example program, you should see rapidly changing random colors on the screen, that turn into a completely blue screen when you press any key (0-9, a-f).
+SHIP-16 is designed as a simple virtual computer intended to be a step-up from the CHIP-8 architecture. It features a 16-bit architecture, a custom instruction set, simple graphics system, and keyboard input. The example emulator is implemented in Rust.
+
+The source consists of three crates:
+- `ship16-rs`: The emulator implementation in Rust.
+- `isa`: The instruction set architecture definition.
+- `asm`: The assembler implementation.
 
 ## Demos
 
@@ -48,6 +53,7 @@ When you run the example program, you should see rapidly changing random colors 
 | Bounce | <img src=".github/assets/bounce.gif" width="300" alt="Bounce Demo"/> | |
 | BSOD | <img src=".github/assets/demo.gif" width="300" alt="BSOD Demo"/> | The screen turns blue when any (recognized) key is pressed. |
 | Sprite Demo | <img src=".github/assets/sprite.gif" width="300" alt="Sprite Demo"/> | The smiley (both neutral and smiling) is a custom sprite encoded in the ROM. It can be controlled with keyboard input. When smiling, the sprite moves faster. |
+| Conway's Game of Life (Gosper Glider Gun) | <img src=".github/assets/gol.gif" width="300" alt="Conway's Game of Life Demo"/> | A simple implementation of Conway's Game of Life (Made by AI) Not shown in the video is the pre-simulation mode where you can set up the starting state of the board with the help of a controllable cursor (1: left, 2: right, 0: up, 9: down, F: toggle dead/alive, A: start simulation). After starting the simulation, step through the iterations by pressing B or toggle the automatic mode by pressing E. |
 
 ## License
 

@@ -2,19 +2,17 @@ use clap::Parser;
 use std::time::{Duration, Instant};
 use winit::event_loop::{ControlFlow, EventLoop};
 
-use crate::{emulator::Emulator, window::App};
+use crate::{emulator::Emulator, graphics::window::App};
 use isa::constants::*;
 
 pub(crate) mod cpu;
 pub(crate) mod emulator;
 pub(crate) mod eval;
+pub(crate) mod graphics;
 pub(crate) mod input;
 pub(crate) mod memory;
-pub(crate) mod palette;
 pub(crate) mod ppu;
-pub(crate) mod terminal;
 pub(crate) mod timer;
-pub(crate) mod window;
 
 #[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 enum Display {
@@ -41,7 +39,7 @@ pub const FRAME_DURATION: Duration = Duration::from_micros(CYCLES_PER_FRAME);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    if let Err(msg) = terminal::check_size(args.debug) {
+    if let Err(msg) = graphics::terminal::check_size(args.debug) {
         eprintln!("Error: {msg}");
         std::process::exit(1);
     }
@@ -51,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         if args.display == Display::Terminal {
-            terminal::restore_terminal();
+            graphics::terminal::restore_terminal();
         }
         default_hook(info);
     }));
@@ -61,10 +59,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     emulator.load_rom(&rom_data)?;
 
     if args.display == Display::Terminal {
-        let _guard = terminal::TerminalGuard::new()?;
+        let _guard = graphics::terminal::TerminalGuard::new()?;
         terminal_frame_loop(&mut emulator, args.debug, args.inspect)?;
         if !emulator.is_running() {
-            terminal::restore_terminal();
+            graphics::terminal::restore_terminal();
         }
     } else {
         // window_frame_loop(emulator, args.debug, args.inspect)?;
@@ -87,12 +85,12 @@ fn terminal_frame_loop(
         .unwrap_or(false);
 
     while emu.is_running() {
-        if !terminal::pump_events(emu)? {
+        if !graphics::terminal::pump_events(emu)? {
             break;
         }
 
         emu.run_frame();
-        terminal::draw(
+        graphics::terminal::draw(
             &mut std::io::stdout().lock(),
             emu.vram(),
             &mut frame,

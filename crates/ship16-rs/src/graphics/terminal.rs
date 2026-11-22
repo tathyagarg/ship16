@@ -5,10 +5,8 @@ use crossterm::{
     execute,
 };
 
-use crate::{
-    emulator::Emulator,
-    palette::{PALETTE, to_ansi256},
-};
+use super::palette::{PALETTE, to_ansi256};
+use crate::emulator::Emulator;
 
 pub struct TerminalGuard;
 
