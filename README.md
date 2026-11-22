@@ -36,6 +36,21 @@ Run an example program:
 cargo run -p ship16-rs --release -- --rom roms/hello_world.rom
 ```
 
+## Running it
+
+You can run a couple of the builtin demos through the `run.sh` script:
+
+```bash
+./run.sh <program_name>
+```
+
+Where `<program_name>` is one of the following:
+- `bounce`
+- `bsod`
+- `hello_world`
+- `conway`
+- `sprite`
+
 ## About
 
 SHIP-16 is designed as a simple virtual computer intended to be a step-up from the CHIP-8 architecture. It features a 16-bit architecture, a custom instruction set, simple graphics system, and keyboard input. The example emulator is implemented in Rust.
